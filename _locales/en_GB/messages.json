@@ -1,9 +1,9 @@
 {
-	"extName": {
-		"message": "Chromoji - Emoji for Google Chrome™",
-		"description": "Extension name."
-	},
-    "desc": {
-        "message": "Chromoji adds the Mac OS X style emoji font symbols to Google Chrome for Windows, Linux, and Mac OS X."
-    }
+  "extName": {
+    "message": "Emoji Polyfill",
+    "description": "Extension Name"
+  },
+  "desc": {
+    "message": "This fork of the 31 January 2014 version of 'Chromoji - Emoji for Google Chrome™' supports only textual emoji and is suitable for corporate deployment; do not use along with Chromoji."
+  }
 }
