@@ -1,22 +1,3 @@
-img.emoji {
-	background-color: transparent !important;
-    border-style: none !important;
-    display: inline !important;
-    left: 0 !important;
-    margin: 0em !important;
-    max-height: 64px !important;
-    max-width: 64px !important;
-    padding: 0em !important;
-    position: relative !important;
-    opacity: 1 !important;
-    outline-style: none !important;
-    resize: none !important;
-    top: 0 !important;
-    visibility: visible !important;
-    z-index: inherit !important;
-    -webkit-perspective: none !important;
-}
-
 span.emojifont {
-	font-family: "Apple Color Emoji", "Segoe UI Symbol", "Symbola" !important;
+	font-family: "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;
 }
