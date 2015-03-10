@@ -1,62 +1,35 @@
-var scalename = "scale";
-var fieldscalename = "fieldscale";
-var ioscompatname = "ioscompat";
-var fieldioscompatname = "fieldioscompat";
-var usefontname = "usefont";
-var fieldusefontname = "fieldusefont";
-var blacklistname = "blacklist";
-var fieldblacklistname = "fieldblacklist";
-
 function loadOptions() {
-	var scale = document.getElementById(fieldscalename);
-	var value = localStorage[scalename];
-	scale.value = value;
-
-	var ioscompat = document.getElementById(fieldioscompatname);
-	value = localStorage[ioscompatname];
-	ioscompat.checked = (value == "true");
-
-	var usefont = document.getElementById(fieldusefontname);
-	value = localStorage[usefontname];
-	usefont.checked = (value == "true");
-
-	var blacklist = document.getElementById(fieldblacklistname);
-	value = localStorage[blacklistname];
+  'use strict';
+	var blacklist = document.getElementById('fieldblacklist'),
+	  value = localStorage.blacklist;
 	blacklist.value = value;
 }
 
 function saveOptions() {
-	var scale = document.getElementById(fieldscalename);
-	var value = scale.value;
-	localStorage[scalename] = value;
-
-	var ioscompat = document.getElementById(fieldioscompatname);
-	value = ioscompat.checked;
-	localStorage[ioscompatname] = value;
-	
-	var usefont = document.getElementById(fieldusefontname);
-	value = usefont.checked;
-	localStorage[usefontname] = value;
-
-	var blacklist = document.getElementById(fieldblacklistname);
-	value = blacklist.value;
-	localStorage[blacklistname] = value;
-
+  'use strict';
+	localStorage.scale = '1.0';
+	localStorage.ioscompat = false;
+	localStorage.usefont = true;
+	var blacklist = document.getElementById('fieldblacklist'),
+	  value = blacklist.value;
+	localStorage.blacklist = value;
 	window.close();
 }
 
 function cancelOptions() {
+  'use strict';
 	window.close();
 }
 
 function init() {
-	var save = document.getElementById("buttonsave");
-	save.addEventListener("click", saveOptions);
+  'use strict';
+	var save = document.getElementById('buttonsave');
+	save.addEventListener('click', saveOptions, false);
 
-	var cancel = document.getElementById("buttoncancel");
-	cancel.addEventListener("click", cancelOptions);
+	var cancel = document.getElementById('buttoncancel');
+	cancel.addEventListener('click', cancelOptions, false);
 
 	loadOptions();
 }
 
-document.body.addEventListener("load", init());
+window.addEventListener('load', init, false);
