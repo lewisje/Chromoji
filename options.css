@@ -1,5 +1,5 @@
 body {
-	font-family: 'Lucida Grande', 'Lucida Sans Unicode', Helvetica, Arial, Verdana, sans-serif;
+	font-family: Arimo, Helvetica, Arial, sans-serif;
 	font-size: 12px;
 	line-height: 18px;
 	color: #333;
@@ -33,7 +33,6 @@ button {
 	display: inline-block;
 }
 
-.donateForm {
-	text-align: center;
-	padding: 1em;
+#fieldblacklist {
+  font-family: PragmataPro, Consolas, Inconsolata, Monaco, "Lucida Console", monospace;
 }
