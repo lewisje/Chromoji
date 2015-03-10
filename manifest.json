@@ -1,26 +1,25 @@
 ﻿{
   "name": "__MSG_extName__",
   "description": "__MSG_desc__",
-  "version": "1.2.10",
+  "version": "1.0.0",
   "manifest_version": 2,
   "default_locale": "en_GB",
   "icons": { "16": "icon16.png",
            "48": "icon48.png",
           "128": "icon128.png" },
-  "homepage_url": "http://chromoji.blogspot.com/",
+  "homepage_url": "",
   "options_page": "options.html",
   "background": {
     "scripts": ["jquery-1.9.1.min.js", "common.js", "background.js"]
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["\u003Call_urls>"],
 	  "css": ["emoji.css"],
       "js": ["jquery-1.9.1.min.js", "common.js", "emoji.js"]
     }
   ],
   "web_accessible_resources": [
-    "images/*.png",
     "chardict.json",
     "jquery.min.map"
   ]
