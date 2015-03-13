@@ -41,7 +41,7 @@ function run(nodes) {
     if (!$(node).html()) node = $(node).parent();
     if ($(node).html()) {
       html = $(node).html(), replacement = html.replace(regexp, function replacer(c) {
-        return '<span class="emojifont">' + c + '</span>';
+        return '<span class="emojifont" id="emoji-font">' + c + '</span>';
       });
       $(node).html(replacement);
     }

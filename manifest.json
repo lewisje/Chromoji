@@ -12,7 +12,6 @@
     "128": "icon128.png",
     "256": "icon256.png"
   },
-  "homepage_url": "",
   "options_page": "options.html",
   "background": {
     "scripts": ["jquery-1.9.1.min.js", "common.js", "background.js"]
@@ -25,7 +24,7 @@
     "js": ["jquery-1.9.1.min.js", "common.js", "emoji.js"]
   }],
   "key": "",
-  "permissions": ["http://*/", "https://*/", "clipboardWrite", "storage"],
+  "permissions": ["http://*/", "https://*/", "tabs", "storage"],
   "update_url": "https://clients2.google.com/service/update2/crx",
   "version": "1.0.0",
   "web_accessible_resources": [

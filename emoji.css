@@ -9,6 +9,6 @@
   src: url("chrome-extension://__MSG_@@extension_id__/EmojiSymbols-Regular.woff");
 }
 
-span.emojifont {
+span.emojifont, #emoji-font {
 	font-family: "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;
 }
