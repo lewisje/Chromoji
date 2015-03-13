@@ -1,3 +1,14 @@
+@font-face {
+  font-family: "Symbola";
+  src: url("chrome-extension://__MSG_@@extension_id__/Symbola_Hint.ttf");
+}
+
+/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */
+@font-face {
+  font-family: "EmojiSymbols";
+  src: url("chrome-extension://__MSG_@@extension_id__/EmojiSymbols-Regular.woff");
+}
+
 span.emojifont {
 	font-family: "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;
 }
