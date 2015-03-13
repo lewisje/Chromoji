@@ -1,4 +1,4 @@
-﻿var charDictionary, items, valid, pattern, regexp, nodes, blacklist;
+﻿var charDictionary, items, pattern, regexp, nodes, blacklist;
 
 if (typeof MutationObserver !== 'function') window.MutationObserver = window.WebKitMutationObserver;
 
@@ -10,9 +10,9 @@ jQuery.fn.just_text = function just_text() {
 function filter_nodes(nodes, regexp) {
   'use strict';
   return $(nodes).find('[contenteditable!="true"][contenteditable!="plaintext-only"]').addBack().filter(function txt(index) {
-    var result = false, text = $(this).just_text(), found = (text.search(regexp) !== -1);
-    if (found) {
-      var html = $(this).html();
+    var result = false, html;
+    if ($(this).just_text().search(regexp) !== -1) {
+      html = $(this).html();
       if (html) {
         index = html.indexOf('document.write');
         result = (index === -1);
@@ -24,24 +24,23 @@ function filter_nodes(nodes, regexp) {
 
 function on_mutation(mutations) {
   'use strict';
-  var i, l = mutations.length;
+  var l = mutations.length, i, mutation, added, al, target;
   for (i = 0; i < l; i++) {
-    var mutation = mutations[i], added = mutation.addedNodes, al = added.length,
-      target = mutation.target;
-    if (al > 0) {
-      var nodes = filter_nodes(added, regexp);
-      run(nodes);
-    }
+    mutation = mutations[i];
+    added = mutation.addedNodes;
+    al = added.length;
+    target = mutation.target;
+    if (al > 0) run(filter_nodes(added, regexp));
   }
 }
 
 function run(nodes) {
   'use strict';
   $.each(nodes, function runnode() {
-    var node = $(this);
+    var node = $(this), html;
     if (!$(node).html()) node = $(node).parent();
     if ($(node).html()) {
-      var html = $(node).html(), replacement = html.replace(regexp, function replacer(c) {
+      html = $(node).html(), replacement = html.replace(regexp, function replacer(c) {
         return '<span class="emojifont">' + c + '</span>';
       });
       $(node).html(replacement);
@@ -73,10 +72,7 @@ function init() {
   readCharDictionary(function validate(chars) {
     charDictionary = chars;
     items = chars.items;
-    valid = items.filter(function val(element, index, array) {
-      return element.image != '';
-    });
-    create_pattern(valid);
+    create_pattern(items);
     regexp = new RegExp(pattern, 'g');
     nodes = filter_nodes($('body'), regexp);
     run(nodes);
