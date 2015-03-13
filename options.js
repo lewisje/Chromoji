@@ -1,34 +1,17 @@
 function loadOptions() {
   'use strict';
-	var blacklist = document.getElementById('fieldblacklist'),
-	  value = localStorage.blacklist;
-	blacklist.value = value;
+  document.getElementById('fieldblacklist').value = localStorage.blacklist;
 }
 
 function saveOptions() {
   'use strict';
-	localStorage.scale = '1.0';
-	localStorage.ioscompat = false;
-	localStorage.usefont = true;
-	var blacklist = document.getElementById('fieldblacklist'),
-	  value = blacklist.value;
-	localStorage.blacklist = value;
-	window.close();
-}
-
-function cancelOptions() {
-  'use strict';
-	window.close();
+	localStorage.blacklist = document.getElementById('fieldblacklist').value;
 }
 
 function init() {
   'use strict';
-	var save = document.getElementById('buttonsave');
-	save.addEventListener('click', saveOptions, false);
-
-	var cancel = document.getElementById('buttoncancel');
-	cancel.addEventListener('click', cancelOptions, false);
-
+	document.getElementById('buttoncancel').addEventListener('click', window.close, false);
+	document.getElementById('buttonsave').addEventListener('click', saveOptions, false);
 	loadOptions();
 }
 
