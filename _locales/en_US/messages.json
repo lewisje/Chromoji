@@ -4,6 +4,6 @@
     "description": "Extension Name"
   },
   "desc": {
-    "message": "This fork of the 31 January 2014 version of 'Chromoji - Emoji for Google Chrome™' supports only textual emoji and is suitable for corporate deployment; do not use along with Chromoji."
+    "message": "This fork of the 31 January 2014 version of 'Chromoji - Emoji for Google Chrome™' supports only textual emoji."
   }
 }

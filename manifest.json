@@ -19,12 +19,11 @@
     "css": ["emoji.css"],
     "js": ["emoji.js"]
   }],
-  "key": "",
   "permissions": ["http://*/", "https://*/"],
   "update_url": "https://clients2.google.com/service/update2/crx",
   "version": "1.0.0",
   "web_accessible_resources": [
-    "Symbola_Hint.ttf",
+    "Symbola_Hint.woff",
     "EmojiSymbols-Regular.woff"
   ]
 }
