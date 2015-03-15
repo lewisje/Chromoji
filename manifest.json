@@ -20,7 +20,7 @@
     "js": ["emoji.js"]
   }],
   "key": "",
-  "permissions": ["http://*/", "https://*/", "tabs", "storage"],
+  "permissions": ["http://*/", "https://*/"],
   "update_url": "https://clients2.google.com/service/update2/crx",
   "version": "1.0.0",
   "web_accessible_resources": [
