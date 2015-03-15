@@ -14,7 +14,8 @@
   },
   "options_page": "options.html",
   "background": {
-    "scripts": ["jquery-1.9.1.min.js", "common.js", "background.js"]
+    "page": "background.html"
+    "scripts": ["jquery-1.9.1.min.js", "common.js"]
   },
   "content_scripts": [{
     "all_frames": true,

@@ -1,12 +1,12 @@
 @font-face {
   font-family: "Symbola";
-  src: url("chrome-extension://__MSG_@@extension_id__/Symbola_Hint.ttf");
+  src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/Symbola_hint.ttf") format("truetype");
 }
 
 /* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */
 @font-face {
   font-family: "EmojiSymbols";
-  src: url("chrome-extension://__MSG_@@extension_id__/EmojiSymbols-Regular.woff");
+  src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/EmojiSymbols-Regular.woff") format("woff");
 }
 
 span.emojifont, #emoji-font {

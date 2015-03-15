@@ -7,9 +7,16 @@
   <body>
     <div id="emoji">
       <fieldset class="fieldset">
+        <h1><img id="logo" src="../icons/icon48.png" width="24" height="24" alt="" title="">Emoji Polyfill <span>options</span></h1>
         <div class="field">
-          <label for="fieldblacklist" id="labeleblacklist">Blacklist</label>
-          <div class="fielddescription">A list of any domains which should not display emoji. This should be the last part of any domain seperated with commas "," e.g. google.com will include images.google.com, le.com will include google.com too as it ends in le.com (so be careful).</div>
+          <input type="checkbox" name="fieldhidePrivate" id="fieldhidePrivate">
+          <label for="fieldhidePrivate" id="labelhidePrivate">Maximum Compatibility</label>
+          <div class="fielddescription">Some custom fonts use characters from the <i>Private Use Area</i>. This option makes sure we don't break sites with such fonts, but keep in mind that some emojis will not be shown when this is turned on (e.g. <a href="https://en.wikipedia.org/wiki/Emoji#SoftBank_encoding" target="_blank">SoftBank</a>).</div>
+        </div>
+        <br>
+        <div class="field">
+          <label for="fieldblacklist" id="labelblacklist">Blacklist</label>
+          <div class="fielddescription">A list of domains that should not display emoji. This should be the last part of any domain seperated with commas "," e.g. google.com will include images.google.com, le.com will include google.com too as it ends in le.com (so be careful).</div>
           <div><textarea name="fieldblacklist" id="fieldblacklist"></textarea></div>
         </div>
       </fieldset>

@@ -1,9 +1,10 @@
 function setDefaultSettings() {
   'use strict';
-  localStorage.blacklist = localStorage.blacklist || 'one.example,another.example';
+  if (localStorage.hidePrivate == null) localStorage.hidePrivate = 'true';
+  if (localStorage.blacklist == null) localStorage.blacklist = 'one.example,another.example';
 }
 
-function listener(request, sender, sendResponse) {
+function listenEmo(request, sender, sendResponse) {
   'use strict';
   var response = $.extend(true, {}, request);
   if (request.setting) response.result = localStorage[request.setting];
@@ -24,5 +25,5 @@ function self_test() {
 }
 
 setDefaultSettings();
-chrome.extension.onMessage.addListener(listener);
+chrome.extension.onMessage.addListener(listenEmo);
 if (localStorage.debug) self_test();
