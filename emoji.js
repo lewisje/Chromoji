@@ -1,7 +1,7 @@
 ﻿(function emojiInsertion(window, undefined) {
 'use strict';
 var items = charDictionary.items, allChars = fillChars(items),
-  regexp = filterHiddenEmojis, nodes, blacklist;
+  regexp = filterHiddenEmojis(), nodes, blacklist;
 
 if (typeof MutationObserver !== 'function') window.MutationObserver = window.WebKitMutationObserver;
 
