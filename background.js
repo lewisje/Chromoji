@@ -11,19 +11,5 @@ function listenEmo(request, sender, sendResponse) {
   sendResponse(response);
 }
 
-function self_test() {
-  'use strict';
-  readCharDictionary(function reader(dict) {
-    var items = dict.items, item;
-    for (var i = items.length - 1; i--;) {
-      item = items[i];
-      if (item.name == '' || item.id == '' || item.id.indexOf(' ') !== -1 ||
-          item.chars.length < 1) console.error(item);
-    }
-    console.log('Done.');
-  });
-}
-
 setDefaultSettings();
 chrome.extension.onMessage.addListener(listenEmo);
-if (localStorage.debug) self_test();
