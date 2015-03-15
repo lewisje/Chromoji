@@ -1,7 +1,17 @@
 ﻿(function emojiInsertion(window, undefined) {
 'use strict';
 var items = charDictionary.items, allChars = fillChars(items),
-  regexp = filterHiddenEmojis(), nodes, blacklist;
+  regexp = new RegExp(allChars.join('|')), nodes;
+
+function walkTheDOM(node, func) {
+  if (func(node)) {
+    node = node.firstChild;
+    while (node) {
+      walkTheDOM(node, func);
+      node = node.nextSibling;
+    }
+  }
+}
 
 if (typeof MutationObserver !== 'function') window.MutationObserver = window.WebKitMutationObserver;
 
@@ -10,6 +20,9 @@ jQuery.fn.just_text = function just_text() {
 };
 
 function filter_nodes(nodes, regexp) {
+//  var nonEditable = nodes.querySelectorAll('[contenteditable!="true"]').querySelectorAll('[contenteditable!="plaintext-only"]'),
+//    txt = function txt(index) {
+//    };
   return $(nodes).find('[contenteditable!="true"][contenteditable!="plaintext-only"]').addBack().filter(function txt(index) {
     var result = false, html;
     if ($(this).just_text().search(regexp) !== -1) {
@@ -35,8 +48,8 @@ function on_mutation(mutations) {
 }
 
 function run(nodes) {
-  $.each(nodes, function runnode() {
-    var node = $(this), html, replacement;
+  nodes.forEach(function runnode(element, index, array) {
+    var node = element, html, replacement;
     if (!$(node).html()) node = $(node).parent();
     if ($(node).html()) {
       html = $(node).html();
@@ -56,11 +69,6 @@ function isPrivate(ch) {
     code >= 0x100000 && code <= 0x10FFFD;
 }
 
-function filterHiddenEmojis() {
-  if (localStorage.hidePrivate) allChars = allChars.filter(function isNotPrivate(ch) {return !isPrivate(ch);});
-  return new RegExp(allChars.join('|'));
-}
-
 function fillChars(items) {
   var charArr = [];
   items.forEach(function charArray(element, index, array) {
@@ -68,6 +76,9 @@ function fillChars(items) {
     chars.forEach(function ch(element, index, array) {
       charArr.push(element);
     });
+  });
+  chrome.extension.sendMessage({setting: 'hidePrivate'}, function filterHidden(response) {
+    if (response.result) charArr = charArr.filter(function isNotPrivate(ch) {return !isPrivate(ch);});
   });
   return charArr;
 }
@@ -77,16 +88,39 @@ function isInput(el) {
     (el.nodeName.toLowerCase() === 'textarea') || el.isContentEditable;
 }
 
-function fontExtend(e) {
-  var el = e.target;
-  if (isInput(el) && !el.dataset.emoji_font) {
-    el.dataset.emoji_font = true;
-    el.style.cssText += ['; font-family: ', window.getComputedStyle(el)['font-family'] || 'monospace',
-      ', "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;'].join('');
-  }
+function isEdit(el) {
+  var n = el.nodeName.toLowerCase();
+  return ((n === 'input' && el.type === 'text') || (n === 'textarea') ||
+    el.isContentEditable);
 }
 
-document.addEventListener('focus', fontExtend, true);
+function fontExtend(el) {
+  var font = window.getComputedStyle(el)['font-family'] || 'monospace';
+  el.dataset.emoji_font = true;
+  el.style.removeProperty('font-family');
+  el.style.cssText += ['; font-family: ', font,
+    ', "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;'].join('');
+}
+
+function fontExtendEdit(e) {
+  var el = e.target;
+  if (isEdit(el) && !el.dataset.emoji_font) fontExtend(el);
+}
+
+document.addEventListener('focus', fontExtendEdit, true);
+
+function fontExtendLoad(el) {
+  var n = el.nodeName.toLowerCase();
+  if (n !== 'script' && n !== 'stylesheet' && n !== 'link' && !isEdit(el) &&
+      !el.dataset.emoji_font) fontExtend(el);
+}
+
+function fontExtender() {
+  walkTheDOM(document.body, fontExtendLoad);
+}
+
+if (isReady()) fontExtender();
+else document.addEventListener('DOMContentLoaded', fontExtender, false);
 
 function start_observer() {
   var target = document.body, observer = new MutationObserver(on_mutation),
@@ -95,20 +129,32 @@ function start_observer() {
 }
 
 function init() {
+  return; //no init for now
   nodes = filter_nodes($('body'), regexp);
   run(nodes);
   start_observer();
 }
 
-$(document).ready(function setup() {
-  chrome.extension.sendMessage({setting: 'blacklist'}, function bset(response) {
-    blacklist = response.result ? response.result.split(',') : [];
-    var blacklisted = false;
-    $.each(blacklist, function blist(key, value) {
-      if (document.domain.indexOf(value) ===
-          document.domain.length - value.length) blacklisted = true;
-    });
-    if (!blacklisted) init();
+function isReady() {
+  return /complete|loaded|interactive/.test(document.readyState);
+}
+
+chrome.extension.sendMessage({setting: 'blacklist'}, function checkBlacklist(response) {
+  var blacklist = response.result;
+  if (!blacklist) {
+    if (isReady()) return init();
+    return document.addEventListener('DOMContentLoaded', init, false);
+  }
+  blacklist = blacklist.split(',');
+  var blacklisted = false;
+  blacklist.forEach(function blist(element, index, array) {
+    var bdomArr = element.split('.'), bl = bdomArr.length, domArr = document.domain.split('.');
+    if (bl <= domArr.length) for (var i = bl; i--;) if (bdomArr.pop() !== domArr.pop()) break;
+    blacklisted = blacklisted || !bdomArr.length;
   });
+  if (!blacklisted) {
+    if (isReady()) return init();
+    return document.addEventListener('DOMContentLoaded', init, false);
+  }
 });
 }(this));

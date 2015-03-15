@@ -398,7 +398,6 @@ var charDictionary = {
         "\uE24A"
       ]
     },
-    /*
     {
       "name":"Black Spade Suit",
       "id":"black_spade_suit",
@@ -431,7 +430,6 @@ var charDictionary = {
         "\uE20D"
       ]
     },
-    */
     {
       "name":"Hot Springs",
       "id":"hot_springs",
