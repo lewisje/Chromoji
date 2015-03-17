@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.5
+// @version 1.0.6
 // @icon http://emojipedia.org/wp-content/uploads/2014/07/72x72x1f4d8-microsoft-windows.png.pagespeed.ic.6uXNWSTQVA.png
 // @include *
 // @grant none
@@ -116,7 +116,7 @@
     var font = window.getComputedStyle(el)['font-family'] || 'monospace', newfont = ['font-family: ',
       font, ', "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;'].join('');
     el.dataset.emoji_font = true;
-    el.style.removeProperty('font-family');
+    el.style.fontFamily = '';
     if (/h[1-6]/i.test(el.nodeName)) el.innerHTML = ['<span style="', newfont, '" emoji_font="true">',
                                                      el.innerHTML, '</span>'].join('');
     else el.style.fontFamily = newfont;
