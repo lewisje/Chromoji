@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.2
+// @version 1.0.3
 // @icon http://emojipedia.org/wp-content/uploads/2014/07/72x72x1f4d8-microsoft-windows.png.pagespeed.ic.6uXNWSTQVA.png
 // @include *
 // @grant none
@@ -51,7 +51,6 @@
   // @win window reference
   // @fn function reference
   function contentLoaded(win, fn, bub) {
-    'use strict';
     var done = false, top = true, doc = win.document, root = doc.documentElement,
       w3c = !!doc.addEventListener, add = w3c ? 'addEventListener' : 'attachEvent',
       rem = w3c ? 'removeEventListener' : 'detachEvent', pre = w3c ? '' : 'on',
@@ -77,7 +76,6 @@
     }
   }
   function cb_addEventListener(obj, evt, fnc, bub) {
-    'use strict';
     bub = !window.addEventListener || bub;
     if (evt === 'DOMContentLoaded') return contentLoaded(window, fnc, bub);
     // W3C model
@@ -130,7 +128,7 @@
   function fontExtendLoad(el) {
     var n = el.nodeName.toLowerCase();
     if (n !== 'script' && n !== 'stylesheet' && n !== 'link' && !isEdit(el) &&
-        hasText(el) && !el.dataset.emoji_font) setZeroTimeout(function ext() {fontExtend(el);});
+        hasText(el) && !el.dataset.emoji_font) window.setZeroTimeout(function ext() {fontExtend(el);});
   }
   function fontExtender() {
     walkTheDOM(document.body, fontExtendLoad);
