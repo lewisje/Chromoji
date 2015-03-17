@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.0
+// @version 1.0.1
 // @icon http://emojipedia.org/wp-content/uploads/2014/07/72x72x1f4d8-microsoft-windows.png.pagespeed.ic.6uXNWSTQVA.png
 // @include *
 // @grant none
