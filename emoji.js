@@ -16,8 +16,8 @@
       var font = window.getComputedStyle(el)['font-family'] || 'monospace';
       el.dataset.emoji_font = true;
       el.style.removeProperty('font-family');
-      el.style.cssText += ['; font-family: ', font,
-        ', "Segoe UI Emoji", "Segoe UI Symbol", Symbola, EmojiSymbols !important;'].join('');
+      el.style.cssText += ['; font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol',",
+                           ' emojiSymb, emojiOSns, emojiSym, emojiAnd !important;'].join('');
     }, fontExtendEdit = function fontExtendEdit(e) {
       var el = e.target;
       if (isEdit(el) && !el.dataset.emoji_font) fontExtend(el);
