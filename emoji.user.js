@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.10
+// @version 1.0.11
 // @icon http://emojipedia.org/wp-content/uploads/2014/07/72x72x1f4d8-microsoft-windows.png.pagespeed.ic.6uXNWSTQVA.png
 // @include *
 // @grant none
@@ -423,6 +423,18 @@
     return (n === 'input' && el.type === 'text') ||
       (n === 'textarea') || el.isContentEditable;
   }
+  //Copyright 2009 Nicholas C. Zakas. All rights reserved.
+  //MIT Licensed
+  /*function timedChunk(items, process, context, callback) {
+    var todo = items.concat();   //create a clone of the original
+    setImmediate(function chunker() {
+      var strt = +new Date();
+      do process.call(context, todo.shift());
+      while (todo.length > 0 && (+new Date() - strt < 50));
+      if (todo.length > 0) setImmediate(chunker);
+      else callback(items);
+    });
+  }*/
   function hasText(el) {
     var nodes = el.childNodes, nl = nodes.length, n;
     if (nl)
@@ -450,23 +462,24 @@
     var font = getStyle(el, 'fontFamily') || 'monospace',
         newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
                    'Symbola, EmojiOSns, EmojiSym, EmojiAnd !important;'].join('');
-    el.dataset.emoji_font = true;
+    el.$emoji = true;
     delStyle(el, 'fontFamily');
-    if (/^h[1-6]$/i.test(el.nodeName))
-      el.innerHTML = ['<span style="', newfont, '" data-emoji_font="true">',
-                       el.innerHTML, '</span>'].join('');
+    if (/^h[1-6]$/i.test(el.nodeName)) {
+      el.innerHTML = ['<span style="', newfont, '">', el.innerHTML, '</span>'].join('');
+      el.firstChild.$emoji = true;
+    }
     else el.style.cssText += '; ' + newfont;
   }
   function fontExtendEdit(e) {
     e = e || window.event;
     var el = e.target;
-    if (isEdit(el) && !el.dataset.emoji_font) fontExtend(el);
+    if (!el.$emoji && isEdit(el)) fontExtend(el);
   }
   function fontExtendLoad(el) {
     if (!el) return false;
     var n = el.nodeName.toLowerCase();
     if (n !== 'script' && n !== 'stylesheet' && n !== 'link' && !isEdit(el)) {
-      if (hasText(el) && !el.dataset.emoji_font)
+      if (!el.$emoji && hasText(el))
         setImmediate(function ext() {fontExtend(el);});
       return true;
     }
