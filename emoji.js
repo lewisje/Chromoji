@@ -57,7 +57,12 @@
       observer.stop();
       fontExtender();
       observer.start();
-    }, observer, observerConfig, r;
+    }, observerConfig = {
+      attributes: false,
+      characterData: false,
+      childList: true,
+      subtree: true
+    }, observer, r;
   document.addEventListener('focus', fontExtendEdit, true);
   // https://github.com/YuzuJS/setImmediate/blob/master/setImmediate.js
   (function (global, undefined) {
@@ -161,12 +166,6 @@
   if (typeof MutationObserver !== 'function')
     window.MutationObserver = window.WebKitMutationObserver;
   observer = new MutationObserver(onMutation);
-  observerConfig = {
-    attributes: false,
-    characterData: false,
-    childList: true,
-    subtree: true
-  };
   observer.start = function start() {
     observer.observe(document.body, observerConfig);
   };
