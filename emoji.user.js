@@ -3,8 +3,8 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.13
-// @icon http://emojipedia.org/wp-content/uploads/2014/07/72x72x1f4d8-microsoft-windows.png.pagespeed.ic.6uXNWSTQVA.png
+// @version 1.0.14
+// @icon https://raw.githubusercontent.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @grant none
 // @run-at document-start
@@ -13,18 +13,20 @@
 
 (function emojiInsertion(window, undefined) {
   'use strict';
+  /* jshint elision:true */
   var emo = {
-    And: ['https://lewisje.github.io/fonts/emojiAnd.eot?#iefix', , 'https://lewisje.github.io/fonts/emojiAnd.woff', , 'https://lewisje.github.io/fonts/emojiAnd.ttf'],
+    And: ['https://lewisje.github.io/fonts/emojiAnd.eot?#iefix', , 'https://lewisje.github.io/fonts/emojiAnd.woff', , 'https://lewisje.github.io/fonts/emojiAnd.ttf',
+      'https://lewisje.github.io/fonts/emojiAnd.svg#emojiAnd'],
     OSns: ['https://lewisje.github.io/fonts/emojiOSns.eot?#iefix', 'https://lewisje.github.io/fonts/emojiOSns.woff2', 'https://lewisje.github.io/fonts/emojiOSns.woff',
-      'https://lewisje.github.io/fonts/emojiOSns.otf', 'https://lewisje.github.io/fonts/emojiOSns.ttf', 'https://lewisje.github.io/fonts/emojiOSns.svg#opensansemojiregular'],
+      'https://lewisje.github.io/fonts/emojiOSns.otf', 'https://lewisje.github.io/fonts/emojiOSns.ttf', 'https://lewisje.github.io/fonts/emojiOSns.svg#emojiOSns'],
     Sym: ['https://lewisje.github.io/fonts/emojiSym.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSym.woff2', 'https://lewisje.github.io/fonts/emojiSym.woff', ,
-      'https://lewisje.github.io/fonts/emojiSym.ttf', 'https://lewisje.github.io/fonts/emojiSym.svg#emojisymbolsregular'],
+      'https://lewisje.github.io/fonts/emojiSym.ttf', 'https://lewisje.github.io/fonts/emojiSym.svg#emojiSym'],
     Symb: ['https://lewisje.github.io/fonts/emojiSymb.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSymb.woff2', 'https://lewisje.github.io/fonts/emojiSymb.woff', ,
-      'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojisymbolsregular']
-  },
+      'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
+  }, /* jshint elision:false */
     typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'], fnt, emofnt, typ, css = ['/* Injected by Emoji Polyfill */'],
-    style = document.createElement('style'), head = document.head || document.getElementsByTagName('head')[0], observer = {}, hidden,
-      NATIVE_MUTATION_EVENTS, visibilityChange, observerConfig, r;
+    style = document.createElement('style'), head = document.head || document.getElementsByTagName('head')[0], observer = {}, observerConfig, r,
+      NATIVE_MUTATION_EVENTS;
   for (fnt in emo) if (emo.hasOwnProperty(fnt)) {
     if (fnt === 'Sym') css.push('\n/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */');
     css.push('\n@font-face {\n  font-family: "Emoji' + fnt + '";\n  src: local("\u263A\uFE0E")');
@@ -63,42 +65,45 @@
    */
   // @win window reference
   // @fn function reference
-  function contentLoaded(win, fn, bub) {
+  function contentLoaded(win, fn, cap) {
     var done = false, top = true, doc = win.document, root = doc.documentElement,
       w3c = !!doc.addEventListener, add = w3c ? 'addEventListener' : 'attachEvent',
       rem = w3c ? 'removeEventListener' : 'detachEvent', pre = w3c ? '' : 'on',
       init = function init(e) {
         if (e.type === 'readystatechange' && doc.readyState !== 'complete') return;
-        (e.type === 'load' ? win : doc)[rem](pre + e.type, init, bub);
+        (e.type === 'load' ? win : doc)[rem](pre + e.type, init, cap);
         if (!done && (done = true)) fn.call(win, e.type || e);
       },
       poll = function poll() {
         try { root.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
         init('poll');
       };
-    bub = w3c && bub;
+    cap = w3c && cap;
     if (doc.readyState === 'complete') fn.call(win, 'lazy');
     else {
       if (doc.createEventObject && root.doScroll) {
         try { top = !win.frameElement; } catch(e) { }
         if (top) poll();
       }
-      doc[add](pre + 'DOMContentLoaded', init, bub);
-      doc[add](pre + 'readystatechange', init, bub);
-      win[add](pre + 'load', init, bub);
+      doc[add](pre + 'DOMContentLoaded', init, cap);
+      doc[add](pre + 'readystatechange', init, cap);
+      win[add](pre + 'load', init, cap);
     }
   }
-  function cb_addEventListener(obj, evt, fnc, bub) {
-    bub = !window.addEventListener || bub;
-    if (evt === 'DOMContentLoaded') return contentLoaded(window, fnc, bub);
+  // https://gist.github.com/eduardocereto/955642
+  function cb_addEventListener(obj, evt, fnc, cap) {
+    cap = !window.addEventListener || cap;
+    if (evt === 'DOMContentLoaded') return contentLoaded(window, fnc, cap);
     // W3C model
     if (obj.addEventListener) {
-      obj.addEventListener(evt, fnc, bub);
+      obj.addEventListener(evt, fnc, cap);
       return true;
     } 
     // Microsoft model
     else if (obj.attachEvent) {
-      return obj.attachEvent('on' + evt, function binder() {return fnc.call(obj, evt);});
+      var binder = function binder() {return fnc.call(obj, evt);};
+      obj.attachEvent('on' + evt, binder);
+      return binder;
     } else { // Browser doesn't support W3C or MSFT model, go on with traditional
       evt = 'on' + evt;
       if (typeof obj[evt] === 'function') {
@@ -115,16 +120,6 @@
       return true;
     }
   }
-  /*function cb_preventDefault(evt) {
-    if (evt.preventDefault) evt.preventDefault(); // W3C
-    if (evt.returnValue) evt.returnValue = false; // IE 8 and earlier
-    return false; // for handlers registered as object properties
-  }
-  function cb_stopPropagation(evt) {
-    if (evt.stopPropagation) evt.stopPropagation(); // W3C
-    if (evt.cancelBubble) evt.cancelBubble = true; // IE 8 and earlier
-    return true;
-  }*/
   // https://github.com/YuzuJS/setImmediate/blob/master/setImmediate.js
   (function (global, undefined) {
     if (global.setImmediate) return;
@@ -268,18 +263,6 @@
     return (n === 'input' && el.type === 'text') ||
       (n === 'textarea') || el.isContentEditable;
   }
-  //Copyright 2009 Nicholas C. Zakas. All rights reserved.
-  //MIT Licensed
-  /*function timedChunk(items, process, context, callback) {
-    var todo = items.concat();   //create a clone of the original
-    setImmediate(function chunker() {
-      var strt = +new Date();
-      do process.call(context, todo.shift());
-      while (todo.length > 0 && (+new Date() - strt < 50));
-      if (todo.length > 0) setImmediate(chunker);
-      else callback(items);
-    });
-  }*/
   function hasText(el) {
     var nodes = el.childNodes, nl = nodes.length, n;
     if (nl)
@@ -306,7 +289,7 @@
   function fontExtend(el) {
     var font = getStyle(el, 'fontFamily') || 'monospace',
         newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-                   'EmojiSymb, EmojiOSns, EmojiSym, EmojiAnd !important;'].join('');
+                   'Symbola, EmojiSymb, EmojiOSns, EmojiSym, EmojiAnd !important;'].join('');
     el.$emoji = true;
     delStyle(el, 'fontFamily');
     if (/^h[1-6]$/i.test(el.nodeName)) {
@@ -341,25 +324,6 @@
     fontExtender();
     observer.start();
   }
-  /*if (typeof document.hidden !== 'undefined') {
-	hidden = 'hidden';
-	visibilityChange = 'visibilitychange';
-  } else if (typeof document.webkitHidden !== 'undefined') {
-	hidden = 'webkitHidden';
-	visibilityChange = 'webkitvisibilitychange';
-  } else if (typeof document.mozHidden !== 'undefined') {
-	hidden = 'mozHidden';
-	visibilityChange = 'mozvisibilitychange';
-  } else if (typeof document.msHidden !== 'undefined') {
-	hidden = 'msHidden';
-	visibilityChange = "msvisibilitychange";
-  } else {
-    hidden = 'visible';
-    visibilityChange = 'change';
-  }*/
-  //cb_addEventListener(document, visibilityChange, fontExtendNode, false);
-  //cb_addEventListener(document, 'click', fontExtendNode, false);
-  //cb_addEventListener(document, 'mousemove', fontExtendNode, false);
   cb_addEventListener(document, 'focus', fontExtendEdit, true);
   if (typeof MutationObserver !== 'function')
     window.MutationObserver = window.WebKitMutationObserver || window.MozMutationObserver;
@@ -404,7 +368,7 @@
       //cb_addEventListener(document.body, 'DOMAttrModified', onMutation, false);
       //cb_addEventListener(document.body, 'DOMCharacterDataModified', onMutation, false);
       cb_addEventListener(document.body, 'DOMNodeInserted', onMutation, false);
-      cb_addEventListener(document, 'DOMSubtreeModified', onMutation, false);
+      cb_addEventListener(document.body, 'DOMSubtreeModified', onMutation, false);
     };
     observer.stop = function stop() {
       if (document.removeEventListener) {
@@ -439,6 +403,4 @@
   r = document.readyState;
   if (r === 'complete' || r === 'loaded' || r === 'interactive') init();
   else cb_addEventListener(document, 'DOMContentLoaded', init, false);
-  //cb_addEventListener(document, 'readystatechange', init, false);
-  //cb_addEventListener(window, 'load', init, false);
 }(window));
