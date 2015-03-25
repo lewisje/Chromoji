@@ -24,7 +24,7 @@
     }, fontExtend = function fontExtend(el) {
       var font = window.getComputedStyle(el, '').fontFamily || 'monospace',
         newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-          'Symbola, emojiSymb, emojiOSns, emojiSym, emojiAnd !important;'].join('');
+          'Symbola, emojiSymb !important;'].join('');
       el.$emoji = true;
       el.style.removeProperty('fontFamily');
       if (/^h[1-6]$/i.test(el.nodeName)) {

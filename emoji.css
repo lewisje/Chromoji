@@ -3,21 +3,3 @@
   src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/emojiSymb.woff2") format("woff2"),
        url("chrome-extension://__MSG_@@extension_id__/emojiSymb.woff") format("woff");
 }
-
-@font-face {
-  font-family: "EmojiOSns";
-  src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/emojiOSns.woff2") format("woff2"),
-       url("chrome-extension://__MSG_@@extension_id__/emojiOSns.woff") format("woff");
-}
-
-/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */
-@font-face {
-  font-family: "EmojiSym";
-  src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/emojiOSns.woff2") format("woff2"),
-       url("chrome-extension://__MSG_@@extension_id__/emojiOSns.woff") format("woff");
-}
-
-@font-face {
-  font-family: "EmojiAnd";
-  src: local("☺︎"), url("chrome-extension://__MSG_@@extension_id__/emojiAnd.woff") format("woff");
-}
