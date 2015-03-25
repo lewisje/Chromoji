@@ -22,9 +22,9 @@
             return true; // /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD
       return false; // \u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/
     }, fontExtend = function fontExtend(el) {
-      var font = window.getComputedStyle(el, '').fontFamily || 'monospace',
-        newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-          'Symbola, emojiSymb !important;'].join('');
+      var font = window.getComputedStyle(el, '').fontFamily.replace(/\s*(("|')?Segoe\sUI\s(Emoji|Symbol)("|')?|Symbola|EmojiSymb),?/g, '') ||
+        'monospace', newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
+                                'Symbola, EmojiSymb !important;'].join('');
       el.$emoji = true;
       el.style.removeProperty('fontFamily');
       if (/^h[1-6]$/i.test(el.nodeName)) {
