@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.14
+// @version 1.0.15
 // @icon https://raw.githubusercontent.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @grant none
@@ -15,12 +15,12 @@
   'use strict';
   /* jshint elision:true */
   var emo = {
-    And: ['https://lewisje.github.io/fonts/emojiAnd.eot?#iefix', , 'https://lewisje.github.io/fonts/emojiAnd.woff', , 'https://lewisje.github.io/fonts/emojiAnd.ttf',
+    /*And: ['https://lewisje.github.io/fonts/emojiAnd.eot?#iefix', , 'https://lewisje.github.io/fonts/emojiAnd.woff', , 'https://lewisje.github.io/fonts/emojiAnd.ttf',
       'https://lewisje.github.io/fonts/emojiAnd.svg#emojiAnd'],
     OSns: ['https://lewisje.github.io/fonts/emojiOSns.eot?#iefix', 'https://lewisje.github.io/fonts/emojiOSns.woff2', 'https://lewisje.github.io/fonts/emojiOSns.woff',
       'https://lewisje.github.io/fonts/emojiOSns.otf', 'https://lewisje.github.io/fonts/emojiOSns.ttf', 'https://lewisje.github.io/fonts/emojiOSns.svg#emojiOSns'],
     Sym: ['https://lewisje.github.io/fonts/emojiSym.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSym.woff2', 'https://lewisje.github.io/fonts/emojiSym.woff', ,
-      'https://lewisje.github.io/fonts/emojiSym.ttf', 'https://lewisje.github.io/fonts/emojiSym.svg#emojiSym'],
+      'https://lewisje.github.io/fonts/emojiSym.ttf', 'https://lewisje.github.io/fonts/emojiSym.svg#emojiSym'],*/
     Symb: ['https://lewisje.github.io/fonts/emojiSymb.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSymb.woff2', 'https://lewisje.github.io/fonts/emojiSymb.woff', ,
       'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
   }, /* jshint elision:false */
@@ -287,9 +287,9 @@
     return null;
   }
   function fontExtend(el) {
-    var font = getStyle(el, 'fontFamily') || 'monospace',
-        newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-                   'Symbola, EmojiSymb, EmojiOSns, EmojiSym, EmojiAnd !important;'].join('');
+    var font = getStyle(el, 'fontFamily').replace(/\s*(("|')?Segoe\sUI\s(Emoji|Symbol)("|')?|Symbola|EmojiSymb),?/g, '') ||
+      'monospace', newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
+                              'Symbola, EmojiSymb !important;'].join('');
     el.$emoji = true;
     delStyle(el, 'fontFamily');
     if (/^h[1-6]$/i.test(el.nodeName)) {
