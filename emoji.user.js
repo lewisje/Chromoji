@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.15
+// @version 1.0.16
 // @icon https://raw.githubusercontent.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @grant none
@@ -264,8 +264,8 @@
       (n === 'textarea') || el.isContentEditable;
   }
   function hasText(el) {
-    var nodes = el.childNodes, nl = nodes.length, n;
-    if (nl)
+    var nodes = el.childNodes, nl = nodes.length, nam = el.nodeName.toLowerCase(), n;
+    if (nl && nam !== 'select' && nam !== 'noframes')
       for (n in nodes)
         if (nodes.hasOwnProperty(n) && nodes[n].nodeType === Node.TEXT_NODE &&
             /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uFFFD]/
@@ -305,8 +305,7 @@
   }
   function fontExtendLoad(el) {
     if (!el) return false;
-    var n = el.nodeName.toLowerCase();
-    if (n !== 'script' && n !== 'stylesheet' && n !== 'link' && !isEdit(el)) {
+    if (!/^(?:frame|iframe|link|noscript|script|style|textarea)$/i.test(el.nodeName) && !isEdit(el)) {
       if (!el.$emoji && hasText(el))
         setImmediate(function ext() {fontExtend(el);});
       return true;
