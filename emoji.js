@@ -13,8 +13,8 @@
       return (n === 'input' && el.type === 'text') ||
         (n === 'textarea') || el.isContentEditable;
     }, hasText = function hasText(el) {
-      var nodes = el.childNodes, nl = nodes.length, n;
-      if (nl)
+      var nodes = el.childNodes, nl = nodes.length, nam = el.nodeName.toLowerCase(), n;
+      if (nl && nam !== 'select' && nam !== 'noframes')
         for (n in nodes)
           if (nodes.hasOwnProperty(n) && nodes[n].nodeType === Node.TEXT_NODE &&
               /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uFFFD]/
@@ -38,8 +38,7 @@
       if (!el.$emoji && isEdit(el)) fontExtend(el);
     }, fontExtendLoad = function fontExtendLoad(el) {
       if (!el) return false;
-      var n = el.nodeName.toLowerCase();
-      if (n !== 'script' && n !== 'stylesheet' && n !== 'link' && !isEdit(el)) {
+      if (!/^(?:frame|iframe|link|noscript|script|style|textarea)$/i.test(el.nodeName) && !isEdit(el)) {
         if (!el.$emoji && hasText(el))
           setImmediate(function ext() {fontExtend(el);});
         return true;
