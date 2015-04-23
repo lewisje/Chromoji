@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.17
+// @version 1.0.18
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -748,8 +748,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     else el.style.cssText += '; ' + newfont;
   }
   function fontExtendEdit(e) {
-    e = e || window.event;
-    var el = e.target;
+    var evt = e || window.event, el = evt.target;
     if (!el.$emoji && isEdit(el)) fontExtend(el);
   }
   function fontExtendLoad(el) {
@@ -762,8 +761,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     return false;
   }
   function fontExtendNode(e) {
-    e = e || window.event;
-    walkTheDOM(e.target, fontExtendLoad);
+    var evt = e || window.event;
+    walkTheDOM(evt.target, fontExtendLoad);
   }
   function fontExtender() {
     fontExtendNode({target: document.body});
