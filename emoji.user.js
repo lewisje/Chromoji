@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.18
+// @version 1.0.19
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -460,7 +460,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     return a;
   }
   return MutationObserver;
-}());
+})();
 
 (function (window, undefined) {
   'use strict';
@@ -474,10 +474,11 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
       'https://lewisje.github.io/fonts/emojiSym.ttf', 'https://lewisje.github.io/fonts/emojiSym.svg#emojiSym'],*/
     Symb: ['https://lewisje.github.io/fonts/emojiSymb.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSymb.woff2', 'https://lewisje.github.io/fonts/emojiSymb.woff', ,
       'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
-  }, /* jshint elision:false */
-    typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'], fnt, emofnt, typ, css = ['/* Injected by Emoji Polyfill */'],
-    style = document.createElement('style'), head = document.head || document.getElementsByTagName('head')[0], observer = {}, observerConfig, r,
-      NATIVE_MUTATION_EVENTS;
+  }, /* jshint elision:false */ fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g, headingRegex = /^h[1-6]$/i,
+    roughEmoRegex = /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD\u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/,
+    textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
+    css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), head = document.head || document.getElementsByTagName('head')[0],
+      observer = {}, observerConfig, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
   for (fnt in emo) if (emo.hasOwnProperty(fnt)) {
     if (fnt === 'Sym') css.push('\n/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */');
     css.push('\n@font-face {\n  font-family: "Emoji' + fnt + '";\n  src: local("\u263A\uFE0E")');
@@ -490,6 +491,28 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   if (style.styleSheet) style.styleSheet.cssText = css;
   else style.appendChild(document.createTextNode(css));
   head.appendChild(style);
+  // part of a pair of functions intended to isolate code that kills the optimizing compiler
+  // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
+  function functionize(func, arg) {
+    switch (typeof func) {
+      case 'string':
+        return new Function(func, String(arg));
+      case 'function':
+        return func;
+      default:
+        return function () {return func;};
+    }
+  }
+  // The first argument to the toCatch callback is the caught error;
+  // if toCatch is passed as a string, this argument must be named "e"
+  function trial(toTry, toCatch, toFinal) {
+    var try1 = functionize(toTry),
+      catch1 = functionize(toCatch, 'e'),
+      final1 = functionize(toFinal);
+    try {try1();}
+    catch (e) {catch1(e);}
+    finally {final1();}
+  }
   // via Douglas Crockford
   function walkTheDOM(node, func) {
     if (func(node)) {
@@ -518,44 +541,53 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   // @fn function reference
   function contentLoaded(win, fn, cap) {
     var done = false, top = true, doc = win.document, root = doc.documentElement,
-      w3c = !!doc.addEventListener, add = w3c ? 'addEventListener' : 'attachEvent',
+      w3c = 'addEventListener' in doc, add = w3c ? 'addEventListener' : 'attachEvent',
       rem = w3c ? 'removeEventListener' : 'detachEvent', pre = w3c ? '' : 'on',
-      init = function (e) {
+      init = function init(e) {
         if (e.type === 'readystatechange' && doc.readyState !== 'complete') return;
         (e.type === 'load' ? win : doc)[rem](pre + e.type, init, cap);
         if (!done && (done = true)) fn.call(win, e.type || e);
       },
-      poll = function () {
+      poll = function poll() {
         try { root.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
         init('poll');
-      };
-    cap = w3c && cap;
+      }, capt = w3c && cap;
     if (doc.readyState === 'complete') fn.call(win, 'lazy');
     else {
       if (doc.createEventObject && root.doScroll) {
         try {top = !win.frameElement;} catch(e) {}
         if (top) poll();
       }
-      doc[add](pre + 'DOMContentLoaded', init, cap);
-      doc[add](pre + 'readystatechange', init, cap);
-      win[add](pre + 'load', init, cap);
+      doc[add](pre + 'DOMContentLoaded', init, capt);
+      doc[add](pre + 'readystatechange', init, capt);
+      win[add](pre + 'load', init, capt);
     }
   }
   // https://gist.github.com/eduardocereto/955642
   function cb_addEventListener(obj, evt, fnc, cap) {
-    cap = !window.addEventListener || cap;
-    if (evt === 'DOMContentLoaded') return contentLoaded(window, fnc, cap);
+    var capt = 'addEventListener' in window && cap, binder, evnt;
+    if (evt === 'DOMContentLoaded') return contentLoaded(window, fnc, capt);
     // W3C model
-    if (obj.addEventListener) {
-      obj.addEventListener(evt, fnc, cap);
+    if ('addEventListener' in obj) {
+      // BBOS6 doesn't support handleEvent, catch and polyfill
+      trial(function () {obj.addEventListener(evt, fnc, capt);},
+            function () {
+              if (typeof fnc === 'object' && 'handleEvent' in fnc) {
+                obj.addEventListener(evt, function (e) {
+                  // Bind fn as this and set first arg as event object
+                  fnc.handleEvent.call(fnc, e);
+                }, capt);
+              } else throw e;
+            });
+      obj.addEventListener(evt, fnc, capt);
       return true;
-    } else if (obj.attachEvent) { // Microsoft Model
-      var binder = function () {return fnc.call(obj, evt);};
+    } else if ('attachEvent' in obj) { // Microsoft Model
+      binder = function binder() {return fnc.call(obj, evt);};
       obj.attachEvent('on' + evt, binder);
       return binder;
     } else { // Browser doesn't support W3C or MSFT model, go on with traditional
-      evt = 'on' + evt;
-      if (typeof obj[evt] === 'function') {
+      evnt = 'on' + evt;
+      if (typeof obj[evnt] === 'function') {
         // Object already has a function on traditional
         // Let's wrap it with our own function inside another function
         fnc = (function (f1, f2) {
@@ -563,150 +595,147 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
             f1.apply(this, arguments);
             f2.apply(this, arguments);
           };
-        }(obj[evt], fnc));
+        }(obj[evnt], fnc));
       }
-      obj[evt] = fnc;
+      obj[evnt] = fnc;
       return true;
     }
   }
-  // https://github.com/YuzuJS/setImmediate/blob/master/setImmediate.js
+  // https://github.com/lewisje/setImmediate-shim-demo/blob/gh-pages/setImmediate.js
   (function (global, undefined) {
-    if (global.setImmediate) return;
-    var nextHandle = 1, // Spec says greater than zero
-      tasksByHandle = {}, currentlyRunningATask = false,
-      doc = global.document, setImmediate;
-    // This function accepts the same arguments as setImmediate, but
-    // returns a function that requires no arguments.
-    function partiallyApplied(handler) {
-      var args = [].slice.call(arguments, 1);
-      return function () {
-        if (typeof handler === 'function') handler.apply(undefined, args);
-        /* jshint evil:true */
-        else (new Function('' + handler)());
-        /* jshint evil:false */
-      };
+    var noNative, doc, slice, toString, timer, polyfill;
+    // See http://codeforhire.com/2013/09/21/setimmediate-and-messagechannel-broken-on-internet-explorer-10/
+    function notUseNative() {
+      return global.navigator && /Trident/.test(global.navigator.userAgent);
     }
-    function clearImmediate(handle) {
-        delete tasksByHandle[handle];
+    noNative = notUseNative();
+    if (!noNative && (global.msSetImmediate || global.setImmediate)) {
+      if (!global.setImmediate) {
+        global.setImmediate = global.msSetImmediate;
+        global.clearImmediate = global.msClearImmediate;
+      }
+      return;
     }
-    function addFromSetImmediateArguments(args) {
-      tasksByHandle[nextHandle] = partiallyApplied.apply(undefined, args);
-      return nextHandle++;
-    }
-    function runIfPresent(handle) {
-      // From the spec: "Wait until any invocations of this algorithm
-      // started before this one have completed."
-      // So if we're currently running a task, we'll need to delay this invocation.
-      if (currentlyRunningATask) setTimeout(partiallyApplied(runIfPresent, handle), 0);
-        // Delay by doing a setTimeout. setImmediate was tried instead,
-        // but in Firefox 7, it generated a "too much recursion" error.
+    doc = global.document;
+    slice = Array.prototype.slice;
+    toString = Object.prototype.toString;
+    timer = {polyfill: {}, nextId: 1, tasks: {}, lock: false};
+    timer.run = function (handleId) {
+      var task;
+      if (timer.lock) global.setTimeout(timer.wrap(timer.run, handleId), 0);
       else {
-        var task = tasksByHandle[handle];
+        task = timer.tasks[handleId];
         if (task) {
-          currentlyRunningATask = true;
-          try {
-            task();
-          } finally {
-            clearImmediate(handle);
-            currentlyRunningATask = false;
-          }
+          timer.lock = true;
+          trial(task, null, function () {
+            timer.clear(handleId);
+            timer.lock = false;
+          });
         }
       }
-    }
-    function installNextTickImplementation() {
-      setImmediate = function () {
-        var handle = addFromSetImmediateArguments(arguments);
-        process.nextTick(partiallyApplied(runIfPresent, handle));
-        return handle;
+    };
+    timer.wrap = function(handler) {
+      var args = slice.call(arguments, 1);
+      return function () {
+        if (typeof handler === 'function') handler.apply(undefined, args);
+        else functionize(String(handler))();
       };
-    }
-    function canUsePostMessage() {
-      // The test against `importScripts` prevents this implementation
-      // from being installed inside a web worker,
-      // where `global.postMessage` means something completely different
-      // and can't be used for this purpose.
-      if (global.postMessage && !global.importScripts) {
-        var postMessageIsAsynchronous = true, oldOnMessage = global.onmessage;
-        global.onmessage = function () {
-          postMessageIsAsynchronous = false;
-        };
-        global.postMessage('', '*');
-        global.onmessage = oldOnMessage;
-        return postMessageIsAsynchronous;
-      }
-    }
-    function installPostMessageImplementation() {
-      // Installs an event handler on `global` for the `message` event: see
-      // https://developer.mozilla.org/en/DOM/window.postMessage
-      // http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html#crossDocumentMessages
-      var messagePrefix = 'setImmediate$' + Math.random() + '$',
-       onGlobalMessage = function (event) {
-        if (event.source === global && typeof event.data === 'string' &&
-            event.data.indexOf(messagePrefix) === 0)
-          runIfPresent(+event.data.slice(messagePrefix.length));
-      };
-      cb_addEventListener(global, 'message', onGlobalMessage, false);
-      setImmediate = function () {
-        var handle = addFromSetImmediateArguments(arguments);
-        global.postMessage(messagePrefix + handle, '*');
-        return handle;
-      };
-    }
-    function installMessageChannelImplementation() {
-      var channel = new MessageChannel();
+    };
+    timer.create = function(args) {
+      timer.tasks[timer.nextId] = timer.wrap.apply(null, args);
+      return timer.nextId++;
+    };
+    timer.clear = function(handleId) {
+      delete timer.tasks[handleId];
+    };
+    timer.polyfill.messageChannel = function () {
+      var channel = new global.MessageChannel();
       channel.port1.onmessage = function (event) {
-        var handle = event.data;
-        runIfPresent(handle);
+        timer.run(Number(event.data));
       };
-      setImmediate = function () {
-        var handle = addFromSetImmediateArguments(arguments);
-        channel.port2.postMessage(handle);
-        return handle;
+      return function () {
+        var handleId = timer.create(arguments);
+        channel.port2.postMessage(handleId);
+        return handleId;
       };
-    }
-    function installReadyStateChangeImplementation() {
+    };
+    timer.polyfill.nextTick = function () {
+      return function () {
+        var handleId = timer.create(arguments);
+        global.process.nextTick(timer.wrap(timer.run, handleId));
+        return handleId;
+      };
+    };
+    timer.polyfill.postMessage = function () {
+      var messagePrefix = 'setImmediate$' + Math.random() + '$',
+        onGlobalMessage = function onGlobalMessage(event) {
+        if (event.source === global &&
+          typeof event.data === 'string' &&
+          event.data.indexOf(messagePrefix) === 0) {
+          timer.run(+event.data.slice(messagePrefix.length));
+        }
+      };
+      if (global.addEventListener) global.addEventListener('message', onGlobalMessage, false);
+      else global.attachEvent('onmessage', onGlobalMessage);
+      return function () {
+        var handleId = timer.create(arguments);
+        global.postMessage(messagePrefix + handleId, '*');
+        return handleId;
+      };
+    };
+    timer.polyfill.readyStateChange = function () {
       var html = doc.documentElement;
-      setImmediate = function () {
-        var handle = addFromSetImmediateArguments(arguments),
+      return function () {
+        var handleId = timer.create(arguments),
           script = doc.createElement('script');
-        // Create a <script> element; its readystatechange event
-        // will be fired asynchronously once it is inserted
-        // into the document. Do so, thus queuing up the task.
-        // Remember to clean up once it's been called.
         script.onreadystatechange = function () {
-          runIfPresent(handle);
+          timer.run(handleId);
           script.onreadystatechange = null;
           html.removeChild(script);
           script = null;
         };
         html.appendChild(script);
-        return handle;
+        return handleId;
       };
-    }
-    function installSetTimeoutImplementation() {
-      setImmediate = function () {
-        var handle = addFromSetImmediateArguments(arguments);
-        setTimeout(partiallyApplied(runIfPresent, handle), 0);
-        return handle;
+    };
+    timer.polyfill.setTimeout = function () {
+      return function () {
+        var handleId = timer.create(arguments);
+        global.setTimeout(timer.wrap(timer.run, handleId), 1);
+        return handleId;
       };
+    };
+    function canUsePostMessage() {
+      if (global.postMessage && !global.importScripts) {
+        var asynch = true, oldOnMessage = global.onmessage;
+        global.onmessage = function () {
+          asynch = false;
+        };
+        global.postMessage('', '*');
+        global.onmessage = oldOnMessage;
+        return asynch;
+      }
     }
+    // Don't get fooled by e.g. browserify environments.
+    // For Node.js before 0.9
+    if (toString.call(global.process) === '[object process]') polyfill = 'nextTick';
+    // For non-IE10 modern browsers
+    else if (canUsePostMessage()) polyfill = 'postMessage';
+    // For web workers, where supported
+    else if (!noNative && global.MessageChannel) polyfill = 'messageChannel';
+    // For IE 6–8
+    else if (doc && ('onreadystatechange' in doc.createElement('script'))) polyfill = 'readyStateChange';
+    // For older browsers
+    else polyfill = 'setTimeout';
     // If supported, we should attach to the prototype of global,
     // since that is where setTimeout et al. live.
     var attachTo = Object.getPrototypeOf && Object.getPrototypeOf(global);
     attachTo = attachTo && attachTo.setTimeout ? attachTo : global;
-    // Don't get fooled by e.g. browserify environments.
-    if ({}.toString.call(global.process) === '[object process]')
-      installNextTickImplementation(); // For Node.js before 0.9
-    else if (canUsePostMessage())
-      installPostMessageImplementation(); // For non-IE10 modern browsers
-    else if (global.MessageChannel)
-      installMessageChannelImplementation(); // For web workers, where supported
-    else if (doc && 'onreadystatechange' in doc.createElement('script'))
-      installReadyStateChangeImplementation(); // For IE 6–8
-    else installSetTimeoutImplementation(); // For older browsers
-    attachTo.setImmediate = setImmediate;
-    attachTo.clearImmediate = clearImmediate;
-  }(window));
+    attachTo.setImmediate = timer.polyfill[polyfill]();
+    attachTo.setImmediate.usepolyfill = polyfill;
+    attachTo.msSetImmediate = attachTo.setImmediate;
+    attachTo.clearImmediate = attachTo.msClearImmediate = timer.clear;
+  })(window);
   function isEdit(el) {
     var n = el.nodeName.toLowerCase();
     return (n === 'input' && el.type === 'text') ||
@@ -717,8 +746,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     if (nl && nam !== 'select' && nam !== 'noframes')
       for (n in nodes)
         if (nodes.hasOwnProperty(n) && nodes[n].nodeType === Node.TEXT_NODE &&
-            /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE000-\uFFFD]/
-            .test(nodes[n].nodeValue))
+            // /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE000-\uFFFD]/
+            roughEmoRegex.test(nodes[n].nodeValue))
           return true;
     return false; // /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD
   }// \u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/
@@ -736,12 +765,11 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     return null;
   }
   function fontExtend(el) {
-    var font = getStyle(el, 'fontFamily').replace(/\s*(("|')?Segoe\sUI\s(Emoji|Symbol)("|')?|Symbola|EmojiSymb),?/g, '') ||
-      'monospace', newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-                              'Symbola, EmojiSymb !important;'].join('');
+    var font = getStyle(el, 'fontFamily').replace(fontEmoRegex, '') || 'monospace',
+      newfont = 'font-family: ' + font + ", 'Segoe UI Emoji', 'Segoe UI Symbol', Symbola, EmojiSymb !important;";
     el.$emoji = true;
     delStyle(el, 'fontFamily');
-    if (/^h[1-6]$/i.test(el.nodeName)) {
+    if (headingRegex.test(el.nodeName)) {
       el.innerHTML = ['<span style="', newfont, '">', el.innerHTML, '</span>'].join('');
       el.firstChild.$emoji = true;
     }
@@ -753,7 +781,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   }
   function fontExtendLoad(el) {
     if (!el) return false;
-    if (!/^(?:frame|iframe|link|noscript|script|style|textarea)$/i.test(el.nodeName) && !isEdit(el)) {
+    if (!textRegex.test(el.nodeName) && !isEdit(el)) {
       if (!el.$emoji && hasText(el))
         setImmediate(function () {fontExtend(el);});
       return true;
@@ -788,7 +816,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   NATIVE_MUTATION_EVENTS = (function () {
     var e, l, f = false, root = document.documentElement;
     l = root.id;
-    e = function () {
+    e = function e() {
       if (root.removeEventListener) root.removeEventListener('DOMAttrModified', e, false);
       else if (root.detachEvent) root.detachEvent('onDOMAttrModified', e);
       else root.onDomAttrModified = null;
@@ -861,4 +889,4 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   r = document.readyState;
   if (r === 'complete' || r === 'loaded' || r === 'interactive') init();
   else cb_addEventListener(document, 'DOMContentLoaded', init, false);
-}(window));
+})(window);
