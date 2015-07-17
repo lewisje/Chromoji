@@ -571,7 +571,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     if ('addEventListener' in obj) {
       // BBOS6 doesn't support handleEvent, catch and polyfill
       trial(function () {obj.addEventListener(evt, fnc, capt);},
-            function () {
+            function () { // http://www.thecssninja.com/javascript/handleevent
               if (typeof fnc === 'object' && 'handleEvent' in fnc) {
                 obj.addEventListener(evt, function (e) {
                   // Bind fn as this and set first arg as event object
