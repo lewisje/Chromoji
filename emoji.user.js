@@ -579,7 +579,6 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
                 }, capt);
               } else throw e;
             });
-      obj.addEventListener(evt, fnc, capt);
       return true;
     } else if ('attachEvent' in obj) { // Microsoft Model
       binder = function binder() {return fnc.call(obj, evt);};
