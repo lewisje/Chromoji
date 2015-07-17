@@ -142,7 +142,7 @@ window.MutationObserver = window.MutationObserver || (function mutat(undefined) 
      *
      * @param {Array.<MutationRecord>} mutations
      */
-    return function(mutations) {
+    return function mutationSearcher(mutations) {
       var olen = mutations.length, dirty;
       // Alright we check base level changes in attributes... easy
       if (config.attr && $oldstate.attr)
@@ -363,7 +363,7 @@ window.MutationObserver = window.MutationObserver || (function mutat(undefined) 
         recurse = config.descendents;
       }
       return elestruct;
-    }($target));
+    })($target);
   }
   /**
    * indexOf an element in a collection of custom nodes
@@ -446,172 +446,195 @@ window.MutationObserver = window.MutationObserver || (function mutat(undefined) 
     return a;
   }
   return MutationObserver;
-}());
+})();
 
 // Here we begin to insert emojis
 (function emojiInsertion(window, undefined) {
   'use strict';
-  var walkTheDOM = function walkTheDOM(node, func) {
-      if (func(node)) {
-        node = node.firstChild;
-        while (node) {
-          walkTheDOM(node, func);
-          node = node.nextSibling;
-        }
-      }
-    }, isEdit = function isEdit(el) {
-      var n = el.nodeName.toLowerCase();
-      return (n === 'input' && el.type === 'text') ||
-        (n === 'textarea') || el.isContentEditable;
-    }, hasText = function hasText(el) {
-      var nodes = el.childNodes, nl = nodes.length, nam = el.nodeName.toLowerCase(), n;
-      if (nl && nam !== 'select' && nam !== 'noframes')
-        for (n in nodes)
-          if (nodes.hasOwnProperty(n) && nodes[n].nodeType === Node.TEXT_NODE &&
-              /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE000-\uFFFD]/
-              .test(nodes[n].nodeValue))
-            return true; // /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD
-      return false; // \u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/
-    }, fontExtend = function fontExtend(el) {
-      var font = window.getComputedStyle(el, '').fontFamily.replace(/\s*(("|')?Segoe\sUI\s(Emoji|Symbol)("|')?|Symbola|EmojiSymb),?/g, '') ||
-        'monospace', newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
-                                'Symbola, EmojiSymb !important;'].join('');
-      el.$emoji = true;
-      el.style.removeProperty('fontFamily');
-      if (/^h[1-6]$/i.test(el.nodeName)) {
-        el.innerHTML = ['<span style="', newfont, '">', el.innerHTML, '</span>'].join('');
-        el.firstChild.$emoji = true;
-      }
-      else el.style.cssText += '; ' + newfont;
-    }, fontExtendEdit = function fontExtendEdit(e) {
-      var el = e.target;
-      if (!el.$emoji && isEdit(el)) fontExtend(el);
-    }, fontExtendLoad = function fontExtendLoad(el) {
-      if (!el) return false;
-      if (!/^(?:frame|iframe|link|noscript|script|style|textarea)$/i.test(el.nodeName) && !isEdit(el)) {
-        if (!el.$emoji && hasText(el))
-          setImmediate(function ext() {fontExtend(el);});
-        return true;
-      }
-      return false;
-    }, fontExtendNode = function fontExtendNode(e) {
-      walkTheDOM(e.target,fontExtendLoad);
-    }, fontExtender = function fontExtender() {
-      fontExtendNode({target: document.body});
-    }, init = function init(e) {
-      document.removeEventListener('DOMContentLoaded', init, false);
-      fontExtender();
-      observer.start();
-    }, onMutation = function onMutation(mutations) {
-      observer.stop();
-      fontExtender();
-      observer.start();
-    }, observerConfig = {
+  var fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g,
+    roughEmoRegex = /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD\u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/,
+    textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea)$/i, headingRegex = /^h[1-6]$/i,
+    observerConfig = {
       attributes: false,
       characterData: false,
       childList: true,
       subtree: true
     }, observer, r;
-  document.addEventListener('focus', fontExtendEdit, true);
-  // https://github.com/YuzuJS/setImmediate/blob/master/setImmediate.js
-  (function (global, undefined) {
-    if (global.setImmediate) return;
-    var nextHandle = 1, // Spec says greater than zero
-      tasksByHandle = {}, currentlyRunningATask = false,
-      doc = global.document, setImmediate;
-    // This function accepts the same arguments as setImmediate, but
-    // returns a function that requires no arguments.
-    function partiallyApplied(handler) {
-      var args = [].slice.call(arguments, 1);
-      return function partiallyApplied() {
-        if (typeof handler === 'function') handler.apply(undefined, args);
-        /* jshint evil:true */
-        else (new Function('' + handler)());
-        /* jshint evil:false */
-      };
+  // part of a pair of functions intended to isolate code that kills the optimizing compiler
+  // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
+  function functionize(func, arg) {
+    switch (typeof func) {
+      case 'string':
+        return new Function(func, String(arg));
+      case 'function':
+        return func;
+      default:
+        return function functionized() {return func;};
     }
-    function clearImmediate(handle) {
-        delete tasksByHandle[handle];
-    }
-    function addFromSetImmediateArguments(args) {
-      tasksByHandle[nextHandle] = partiallyApplied.apply(undefined, args);
-      return nextHandle++;
-    }
-    function runIfPresent(handle) {
-      // From the spec: "Wait until any invocations of this algorithm
-      // started before this one have completed."
-      // So if we're currently running a task, we'll need to delay this invocation.
-      if (currentlyRunningATask) setTimeout(partiallyApplied(runIfPresent, handle), 0);
-        // Delay by doing a setTimeout. setImmediate was tried instead,
-        // but in Firefox 7, it generated a "too much recursion" error.
-      else {
-        var task = tasksByHandle[handle];
-        if (task) {
-          currentlyRunningATask = true;
-          try {
-            task();
-          } finally {
-            clearImmediate(handle);
-            currentlyRunningATask = false;
-          }
-        }
+  }
+  // The first argument to the toCatch callback is the caught error;
+  // if toCatch is passed as a string, this argument must be named "e"
+  function trial(toTry, toCatch, toFinal) {
+    var try1 = functionize(toTry),
+      catch1 = functionize(toCatch, 'e'),
+      final1 = functionize(toFinal);
+    try {try1();}
+    catch (e) {catch1(e);}
+    finally {final1();}
+  }
+  // via Douglas Crockford
+  function walkTheDOM(node, func) {
+    if (func(node)) {
+      node = node.firstChild;
+      while (node) {
+        walkTheDOM(node, func);
+        node = node.nextSibling;
       }
     }
+  }
+  // https://github.com/lewisje/setImmediate-shim-demo/blob/gh-pages/setImmediate.js
+  (function setImmediatePolyfill(global, undefined) {
+    var doc, slice, toString, timer, polyfill;
+    if ('setImmediate' in global) return;
+    doc = global.document;
+    slice = Array.prototype.slice;
+    toString = Object.prototype.toString;
+    timer = {polyfill: {}, nextId: 1, tasks: {}, lock: false};
+    timer.run = function run(handleId) {
+      var task;
+      if (timer.lock) global.setTimeout(timer.wrap(timer.run, handleId), 0);
+      else {
+        task = timer.tasks[handleId];
+        if (task) {
+          timer.lock = true;
+          trial(task, null, function final1() {
+            timer.clear(handleId);
+            timer.lock = false;
+          });
+        }
+      }
+    };
+    timer.wrap = function wrap(handler) {
+      var args = slice.call(arguments, 1);
+      return function wrapped() {
+        if (typeof handler === 'function') handler.apply(undefined, args);
+        else functionize(String(handler))();
+      };
+    };
+    timer.create = function create(args) {
+      timer.tasks[timer.nextId] = timer.wrap.apply(null, args);
+      return timer.nextId++;
+    };
+    timer.clear = function clear(handleId) {
+      delete timer.tasks[handleId];
+    };
+    timer.polyfill.messageChannel = function messageChannel() {
+      var channel = new global.MessageChannel();
+      channel.port1.onmessage = function onmessage(event) {
+        timer.run(Number(event.data));
+      };
+      return function setImmediate() {
+        var handleId = timer.create(arguments);
+        channel.port2.postMessage(handleId);
+        return handleId;
+      };
+    };
+    timer.polyfill.postMessage = function postMessage() {
+      var messagePrefix = 'setImmediate$' + Math.random() + '$',
+        onGlobalMessage = function onGlobalMessage(event) {
+        if (event.source === global &&
+          typeof event.data === 'string' &&
+          event.data.indexOf(messagePrefix) === 0) {
+          timer.run(+event.data.slice(messagePrefix.length));
+        }
+      };
+      global.addEventListener('message', onGlobalMessage, false);
+      return function setImmediate() {
+        var handleId = timer.create(arguments);
+        global.postMessage(messagePrefix + handleId, '*');
+        return handleId;
+      };
+    };
     function canUsePostMessage() {
-      // The test against `importScripts` prevents this implementation
-      // from being installed inside a web worker,
-      // where `global.postMessage` means something completely different
-      // and can't be used for this purpose.
-      if (global.postMessage && !global.importScripts) {
-        var postMessageIsAsynchronous = true, oldOnMessage = global.onmessage;
-        global.onmessage = function onMsg() {
-          postMessageIsAsynchronous = false;
+      if ('postMessage' in global && !('importScripts' in global)) {
+        var asynch = true, oldOnMessage = global.onmessage;
+        global.onmessage = function onmessage() {
+          asynch = false;
         };
         global.postMessage('', '*');
         global.onmessage = oldOnMessage;
-        return postMessageIsAsynchronous;
+        return asynch;
       }
     }
-    function installPostMessageImplementation() {
-      // Installs an event handler on `global` for the `message` event: see
-      // https://developer.mozilla.org/en/DOM/window.postMessage
-      // http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html#crossDocumentMessages
-      var messagePrefix = 'setImmediate$' + Math.random() + '$',
-       onGlobalMessage = function onGlobalMessage(event) {
-        if (event.source === global && typeof event.data === 'string' &&
-            event.data.indexOf(messagePrefix) === 0)
-          runIfPresent(+event.data.slice(messagePrefix.length));
-      };
-      global.addEventListener('message', onGlobalMessage, false);
-      setImmediate = function setImmediate() {
-        var handle = addFromSetImmediateArguments(arguments);
-        global.postMessage(messagePrefix + handle, '*');
-        return handle;
-      };
-    }
-    function installMessageChannelImplementation() {
-      var channel = new MessageChannel();
-      channel.port1.onmessage = function onMsg(event) {
-        var handle = event.data;
-        runIfPresent(handle);
-      };
-      setImmediate = function setImmediate() {
-        var handle = addFromSetImmediateArguments(arguments);
-        channel.port2.postMessage(handle);
-        return handle;
-      };
-    }
+    // For non-IE10 modern browsers
+    if (canUsePostMessage()) polyfill = 'postMessage';
+    // For web workers, where supported
+    else polyfill = 'messageChannel';
     // If supported, we should attach to the prototype of global,
     // since that is where setTimeout et al. live.
-    var attachTo = Object.getPrototypeOf && Object.getPrototypeOf(global);
-    attachTo = attachTo && attachTo.setTimeout ? attachTo : global;
-    if (canUsePostMessage())
-      installPostMessageImplementation(); // For non-IE10 modern browsers
-    else if (global.MessageChannel)
-      installMessageChannelImplementation(); // For web workers, where supported
-    attachTo.setImmediate = setImmediate;
-    attachTo.clearImmediate = clearImmediate;
-  }(window));
+    var attachTo = 'getPrototypeOf' in Object && Object.getPrototypeOf(global);
+    attachTo = attachTo && 'setTimeout' in attachTo ? attachTo : global;
+    attachTo.setImmediate = timer.polyfill[polyfill]();
+    attachTo.setImmediate.usepolyfill = polyfill;
+    attachTo.clearImmediate = timer.clear;
+  })(window);
+  function isEdit(el) {
+    var n = el.nodeName.toLowerCase();
+    return (n === 'input' && el.type === 'text') ||
+      (n === 'textarea') || el.isContentEditable;
+  }
+  function hasText(el) {
+    var nodes = el.childNodes, nl = nodes.length, nam = el.nodeName.toLowerCase(), n;
+    if (nl && nam !== 'select' && nam !== 'noframes')
+      for (n in nodes)
+        if (nodes.hasOwnProperty(n) && nodes[n].nodeType === Node.TEXT_NODE &&
+            // /[^\s\w\u0000-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE000-\uFFFD]/
+            roughEmoRegex.test(nodes[n].nodeValue))
+          return true; // /[^\s\w\u0000-\u0022\u0024-\u002F\u003A-\u00A8\u00AA-\u00AD
+    return false; // \u00AF-\u203B\u2050-\u2116\u3299-\uD7FF\uE537-\uF8FE\uF900-\uFFFF]/
+  }
+  function fontExtend(el) {
+    var font = window.getComputedStyle(el, '').fontFamily.replace(fontEmoRegex, '') ||
+      'monospace', newfont = ['font-family: ', font, ", 'Segoe UI Emoji', 'Segoe UI Symbol', ",
+                              'Symbola, EmojiSymb !important;'].join('');
+    el.$emoji = true;
+    el.style.removeProperty('fontFamily');
+    if (headingRegex.test(el.nodeName)) {
+      el.innerHTML = ['<span style="', newfont, '">', el.innerHTML, '</span>'].join('');
+      el.firstChild.$emoji = true;
+    }
+    else el.style.cssText += '; ' + newfont;
+  }
+  function fontExtendEdit(e) {
+    var el = e.target;
+    if (!el.$emoji && isEdit(el)) fontExtend(el);
+  }
+  function fontExtendLoad(el) {
+    if (!el) return false;
+    if (!textRegex.test(el.nodeName) && !isEdit(el)) {
+      if (!el.$emoji && hasText(el))
+        setImmediate(function ext() {fontExtend(el);});
+      return true;
+    }
+    return false;
+  }
+  function fontExtendNode(e) {
+    walkTheDOM(e.target,fontExtendLoad);
+  }
+  function fontExtender() {
+    fontExtendNode({target: document.body});
+  }
+  function init(e) {
+    document.removeEventListener('DOMContentLoaded', init, false);
+    fontExtender();
+    observer.start();
+  }
+  function onMutation(mutations) {
+    observer.stop();
+    fontExtender();
+    observer.start();
+  }
+  document.addEventListener('focus', fontExtendEdit, true);
   observer = new MutationObserver(onMutation);
   observer.start = function start() {
     observer.observe(document.body, observerConfig);
@@ -622,4 +645,4 @@ window.MutationObserver = window.MutationObserver || (function mutat(undefined) 
   r = document.readyState;
   if (r === 'complete' || r === 'loaded' || r === 'interactive') init();
   else document.addEventListener('DOMContentLoaded', init, false);
-}(this));
+})(this);
