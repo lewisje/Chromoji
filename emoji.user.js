@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.19
+// @version 1.0.20
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
