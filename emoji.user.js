@@ -496,7 +496,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   function functionize(func, arg) {
     switch (typeof func) {
       case 'string':
-        return new Function(func, String(arg));
+        return arg ? new Function(String(arg), func) : new Function(func);
       case 'function':
         return func;
       default:
