@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.21
+// @version 1.0.22
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -90,15 +90,15 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
         // some browsers are strict in their implementation that config.subtree and childList must be set together. We don't care - spec doesn't specify
         kids: !!config.childList, descendents: !!config.subtree,
         charData: !!(config.characterData || config.characterDataOldValue)
-      }, watched = this._watched;
+      }, watched = this._watched, i = 0;
       // remove already observed target element from pool
-      for (var i = 0; i < watched.length; i++) if (watched[i].tar === $target) watched.splice(i, 1);
+      for (; i < watched.length; i++) if (watched[i].tar === $target) watched.splice(i, 1);
       if (config.attributeFilter)
         /**
          * converts to a {key: true} dict for faster lookup
          * @type {Object.<String,Boolean>}
          */
-        settings.afilter = reduce(config.attributeFilter, function truth(a, b) {
+        settings.afilter = reduce(config.attributeFilter, function (a, b) {
           a[b] = true;
           return a;
         }, {});
@@ -115,8 +115,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
      * @return {Array.<mutationRecord>}
      */
     takeRecords: function () {
-      var mutations = [], watched = this._watched, wl = watched.length;
-      for (var i = 0; i < wl; i++) watched[i].fn(mutations);
+      var mutations = [], watched = this._watched, wl = watched.length, i = 0;
+      for (; i < wl; i++) watched[i].fn(mutations);
       return mutations;
     },
     /**
