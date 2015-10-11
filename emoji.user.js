@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.22
+// @version 1.0.23
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -458,9 +458,10 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   }, /* jshint elision: false */ fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g, headingRegex = /^h[1-6]$/i,
     roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
-    css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), head = document.head || document.getElementsByTagName('head')[0],
-    MutationObserver = window.MutationObserver, funcProto = Function.prototype, observer = {}, observerConfig, body, fontExtender,
-    trim, addHandler, removeHandler, setImmediate, getStyle, delStyle, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
+    css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), funcProto = Function.prototype,
+    head = document.head || document.getElementsByTagName('head')[0], MutationObserver = window.MutationObserver,
+    observer = {}, observerConfig, body, fontExtender, trim, addHandler, removeHandler, setImmediate, emoProp,
+    getStyle, delStyle, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
   for (fnt in emo) if (emo.hasOwnProperty(fnt)) {
     if (fnt === 'Sym') css.push('\n/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */');
     css.push('\n@font-face {\n  font-family: "Emoji' + fnt + '";\n  src: local("\u263A\uFE0E")');
@@ -476,13 +477,15 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   // part of a pair of functions intended to isolate code that kills the optimizing compiler
   // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
   function functionize(func, arg) {
+    var functionized;
     switch (typeof func) {
       case 'string':
         return arg ? new Function(String(arg), func) : new Function(func); // jshint evil: true
       case 'function':
         return func;
       default:
-        return function () {return func;};
+        functionized = function functionized() {return func;};
+        return functionized;
     }
   }
   // The first argument to the toCatch callback is the caught error;
@@ -708,7 +711,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     timer = {polyfill: {}, nextId: 1, tasks: {}, lock: false};
     timer.run = function (handleId) {
       var task;
-      if (timer.lock) global.setTimeout(timer.wrap(timer.run, handleId), 0);
+      if (timer.lock) global.setTimeout(timer.wrap(timer.run, handleId), 1);
       else {
         task = timer.tasks[handleId];
         if (task) {
@@ -836,6 +839,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     attachTo.clearImmediate = attachTo.msClearImmediate = timer.clear;
     return attachTo.setImmediate;
   })(Object, Array, window);
+  if (hasMethod(window, 'Symbol')) emoProp = Symbol('$emoji$');
+  else emoProp = '$emoji$' + (10 * Math.random()) + '$';
   function isEdit(el) {
     var n = el.nodeName.toLowerCase();
     return (n === 'input' && el.type === 'text') ||
@@ -868,22 +873,22 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   function fontExtend(el) {
     var font = getStyle(el, 'fontFamily').replace(fontEmoRegex, '') || 'monospace',
       newfont = 'font-family: ' + font + ", 'Segoe UI Emoji', 'Segoe UI Symbol', Symbola, EmojiSymb !important;";
-    el.$emoji = true;
+    el[emoProp] = true;
     delStyle(el, 'fontFamily');
     if (headingRegex.test(el.nodeName)) {
       el.innerHTML = ['<span style="', newfont, '">', el.innerHTML, '</span>'].join('');
-      el.firstChild.$emoji = true;
+      el.firstChild[emoProp] = true;
     }
     else el.style.cssText += '; ' + newfont;
   }
   function fontExtendEdit(e) {
     var evt = e || window.event, el = evt.target;
-    if (!el.$emoji && isEdit(el)) fontExtend(el);
+    if (!el[emoProp] && isEdit(el)) fontExtend(el);
   }
   function fontExtendLoad(el) {
     if (!el) return false;
     if (!textRegex.test(el.nodeName) && !isEdit(el)) {
-      if (!el.$emoji && hasText(el)) setImmediate(function () {fontExtend(el);});
+      if (!el[emoProp] && hasText(el)) setImmediate(bind(fontExtend, null, el));
       return true;
     }
     return false;
