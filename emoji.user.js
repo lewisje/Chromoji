@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.24
+// @version 1.0.25
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -461,7 +461,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
     css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), funcProto = Function.prototype,
     head = document.head || document.getElementsByTagName('head')[0], MutationObserver = window.MutationObserver,
-    observer = {}, observerConfig, body, fontExtender, trim, addHandler, removeHandler, setImmediate, emoProp,
+    observer = {}, observerConfig, body, fontExtender, addHandler, removeHandler, setImmediate, emoProp,
     getStyle, delStyle, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
   for (fnt in emo) if (emo.hasOwnProperty(fnt)) {
     if (fnt === 'Sym') css.push('\n/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */');
@@ -524,38 +524,6 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     fBound.prototype = new FNOP();
     return fBound;
   };
-  // String#trim adapted from https://github.com/es-shims/es5-shim/blob/master/es5-shim.js
-  // and https://github.com/es-shims/es6-shim/blob/master/es6-shim.js
-  (function (strProto) {
-    var ws = '\t\n\v\f\r \xA0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F\u2028' +
-        '\u2029\u3000\uFEFF', trimBeginRegexp = new RegExp('^[' + ws + '][' + ws + ']*'), hasTrim = hasMethod(strProto, 'trim'),
-      hasLTrim = hasMethod(strProto, 'trimLeft'), hasRTrim = hasMethod(strProto, 'trimRight'), trimLeft, trimRight,
-      hasTrimWhitespaceBug = hasTrim && (ws.trim() || !'\x85'.trim() || !'\u200B'.trim()),
-      hasLTrimWhitespaceBug = hasLTrim && (ws.trimLeft() || !'\x85'.trimLeft() || '\u200B'.trimLeft()),
-      hasRTrimWhitespaceBug = hasRTrim && (ws.trimRight() || !'\x85'.trimRight() || '\u200B'.trimRight());
-    // Proposals for ECMA-262, Edition 7
-    // Reference: https://github.com/sebmarkbage/ecmascript-string-left-right-trim/blob/master/Spec.md
-    if (!hasLTrim || hasLTrimWhitespaceBug) {
-      trimLeft = function trimLeft(s) {
-        var str = String(s);
-        return str && str.replace(trimBeginRegexp, '');
-      };
-    }
-    else trimLeft = bind(funcProto.call, strProto.trimLeft);
-    if (!hasRTrim || hasRTrimWhitespaceBug) {
-      trimRight = function trimRight(s) {
-        var str = String(s), i;
-        if (str === '') return '';
-        i = str.length;
-        while (i--) if (ws.indexOf(str.charAt(i)) === -1) return str.substring(0, i + 1);
-        return '';
-      };
-    } else trimRight = bind(funcProto.call, strProto.trimRight);
-    // http://blog.stevenlevithan.com/archives/faster-trim-javascript
-    // http://perfectionkills.com/whitespace-deviations/
-    if (!hasTrim || hasTrimWhitespaceBug) trim = function trim(str) {return trimLeft(trimRight(String(str)));};
-    else trim = bind(funcProto.call, strProto.trim);
-  })(String.prototype);
   // Production steps of ECMA-262, Edition 5, 15.4.4.20
   // Reference: https://es5.github.io/#x15.4.4.20
   if (hasMethod(Array.prototype, 'filter')) filter = bind(funcProto.call, Array.prototype.filter);
