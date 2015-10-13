@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.23
+// @version 1.0.24
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -456,7 +456,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     Symb: ['https://lewisje.github.io/fonts/emojiSymb.eot?#iefix', 'https://lewisje.github.io/fonts/emojiSymb.woff2', 'https://lewisje.github.io/fonts/emojiSymb.woff', ,
       'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
   }, /* jshint elision: false */ fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g, headingRegex = /^h[1-6]$/i,
-    roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
+    roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3040-\u31FF\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
+    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false, bind, filter,
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
     css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), funcProto = Function.prototype,
     head = document.head || document.getElementsByTagName('head')[0], MutationObserver = window.MutationObserver,
@@ -509,10 +510,10 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   }
   // Production steps of ECMA-262, Edition 5, 15.3.4.5
   // Reference: https://es5.github.io/#x15.3.4.5
-  function bind(func, oThis) {
+  if (hasMethod(funcProto, 'bind')) bind = funcProto.call.bind(funcProto.bind);
+  else bind = function bind(func, oThis) {
     var aArgs = [], len = arguments.length, i = 2, fToBind = functionize(func), FNOP, fBound;
     for (; i < len; i++) aArgs.push(arguments[i]);
-    if (hasMethod(funcProto, 'bind')) return funcProto.bind.apply(fToBind, [oThis].concat(aArgs));
     FNOP = function FNOP() {};
     if (fToBind.prototype) FNOP.prototype = fToBind.prototype;
     fBound = function fBound() { // jshint validthis: true
@@ -522,7 +523,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     };
     fBound.prototype = new FNOP();
     return fBound;
-  }
+  };
   // String#trim adapted from https://github.com/es-shims/es5-shim/blob/master/es5-shim.js
   // and https://github.com/es-shims/es6-shim/blob/master/es6-shim.js
   (function (strProto) {
@@ -540,7 +541,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
         return str && str.replace(trimBeginRegexp, '');
       };
     }
-    else trimLeft = function trimLeft(s) {return String(s).trimLeft();};
+    else trimLeft = bind(funcProto.call, strProto.trimLeft);
     if (!hasRTrim || hasRTrimWhitespaceBug) {
       trimRight = function trimRight(s) {
         var str = String(s), i;
@@ -549,12 +550,26 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
         while (i--) if (ws.indexOf(str.charAt(i)) === -1) return str.substring(0, i + 1);
         return '';
       };
-    } else trimRight = function trimRight(s) {return String(s).trimRight();};
+    } else trimRight = bind(funcProto.call, strProto.trimRight);
     // http://blog.stevenlevithan.com/archives/faster-trim-javascript
     // http://perfectionkills.com/whitespace-deviations/
     if (!hasTrim || hasTrimWhitespaceBug) trim = function trim(str) {return trimLeft(trimRight(String(str)));};
-    else trim = function trim(str) {return String(str).trim();};
+    else trim = bind(funcProto.call, strProto.trim);
   })(String.prototype);
+  // Production steps of ECMA-262, Edition 5, 15.4.4.20
+  // Reference: https://es5.github.io/#x15.4.4.20
+  if (hasMethod(Array.prototype, 'filter')) filter = bind(funcProto.call, Array.prototype.filter);
+  else filter = function filter(arr, callback, thisArg) { // jshint validthis: true
+    if (!arr) return arr;
+    if (!isCallable(callback)) throw new TypeError('callback must be a function');
+    var t = (typeof arr === 'string') ? arr.split('') : Object(arr), len = t.length >>> 0,
+      res = [], i = 0, val;
+    for (; i < len; i++) if (i in t) {
+      val = t[i];
+      if (callback.call(thisArg, val, i, t)) res[res.length] = val;
+    }
+    return res;
+  };
   // via Douglas Crockford
   function walk(nod, fnc) {
     var func = functionize(fnc), node = nod;
@@ -825,14 +840,14 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     else if (canUsePostMessage()) polyfill = 'postMessage';
     // For web workers, where supported
     else if (!noNative && global.MessageChannel) polyfill = 'messageChannel';
-    // For IE 6â€“8
+    // For IE 6-8
     else if (doc && ('onreadystatechange' in doc.createElement('script'))) polyfill = 'readyStateChange';
     // For older browsers
     else polyfill = 'setTimeout';
     // If supported, we should attach to the prototype of global,
     // since that is where setTimeout et al. live.
     var attachTo = Object.getPrototypeOf && Object.getPrototypeOf(global);
-    attachTo = attachTo && attachTo.setTimeout ? attachTo : global;
+    attachTo = attachTo && hasMethod(attachTo, 'setTimeout') ? attachTo : global;
     attachTo.setImmediate = timer.polyfill[polyfill]();
     attachTo.setImmediate.usepolyfill = polyfill;
     attachTo.msSetImmediate = attachTo.setImmediate;
@@ -843,16 +858,23 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   else emoProp = '$emoji$' + (10 * Math.random()) + '$';
   function isEdit(el) {
     var n = el.nodeName.toLowerCase();
-    return (n === 'input' && el.type === 'text') ||
-      (n === 'textarea') || el.isContentEditable;
+    return (n === 'input' && el.type === 'text') || (n === 'textarea') || el.isContentEditable;
+  }
+  function astralTest(str) {
+    if (surrogate) {
+      surrogate = upperRegex.test(str);
+      return !surrogate && !lowerRegex.test(str);
+    }
+    surrogate = upperRegex.test(str);
+    return !surrogate;
   }
   function hasText(el) {
-    var nodes = el.childNodes, nl = nodes.length, nam = el.nodeName.toLowerCase(), n = 0, node, val;
-    if (nl && nam !== 'select' && nam !== 'noframes')
-      for (; n < nl; n++) {
+    var nodes = el.childNodes, n = nodes.length, nam = el.nodeName.toLowerCase(), node, val;
+    if (n && nam !== 'select' && nam !== 'noframes')
+      while (n--) {
         node = nodes[n];
-        val = (node.nodeType === 3) ? trim(node.nodeValue) : '';
-        if (val && roughEmoRegex.test(val)) return true;
+        val = (node.nodeType === 3) ? node.nodeValue.match(roughEmoRegex) : null;
+        if (val && val.length && filter(val, astralTest).join('')) return true;
       }
     return false;
   }
