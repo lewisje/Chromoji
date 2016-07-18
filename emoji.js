@@ -433,38 +433,52 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
   'use strict';
   var fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g,
     roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3040-\u31FF\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
-    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false,
+    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false, constructorRegex = /\s*class /,
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, headingRegex = /^h[1-6]$/i,
+    hasSymbols = typeof Symbol === 'function' && typeof Symbol() === 'symbol',
+    hasToStringTag = hasSymbols && typeof Symbol.toStringTag === 'symbol',
     observerConfig = {
       attributes: false,
       characterData: false,
       childList: true,
       subtree: true
-    }, defProp = Object.defineProperty, setImmediate, emoProp, desc, body, fontExtender, observer, r;
+    }, defProp = Object.defineProperty, _toString = Object.prototype.toString, fnToString = Function.prototype.toString,
+    setImmediate, emoProp, desc, body, fontExtender, observer, r;
   // part of a pair of functions intended to isolate code that kills the optimizing compiler
   // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
-  function functionize(func, arg) {
-    switch (typeof func) {
-      case 'string':
-        return arg ? new Function(String(arg), func) : new Function(func); // jshint evil: true
-      case 'function':
-        return func;
-      default:
-        return function functionized() {return func;};
+  function functionize(func, arg) { /* jshint evil: true */
+    var typ = typeof func, thunk;
+    if (isCallable(func)) return func;
+    if (func && 'string' === typ || ('object' === typ && '[object String]' === _toString.apply(func))) {
+      trial(function () {thunk = arg ? new Function(String(arg), func) : new Function(func);}); // jshint evil: true
     }
+    thunk = thunk || function thunk() {return func;};
+    return thunk;
   }
   // The first argument to the toCatch callback is the caught error;
-  // if toCatch is passed as a string, this argument must be named "e"
+  // if toCatch is passed as a string, this argument must be named "_"
   function trial(toTry, toCatch, toFinal) {
     var _try = functionize(toTry),
-      _catch = functionize(toCatch, 'e'),
+      _catch = functionize(toCatch, '_'),
       _final = functionize(toFinal);
     try {_try();}
-    catch (e) {_catch(e);}
+    catch (_) {_catch(_);}
     finally {_final();}
   }
+  function tryFunctionObject(value) {
+    try {fnToString.apply(value); return true;}
+    catch (_) {return false;}
+  }
+  // Reference: https://github.com/ljharb/is-callable/
   function isCallable(fn) {
-    return typeof fn === 'function' || Object.prototype.toString.apply(fn) === '[object Function]';
+    var typ = typeof fn, callable = false, strClass;
+    if (!fn) return false;
+    if ('function' !== typ && 'object' !== typ && 'unknown' !== typ) return false;
+    if (constructorRegex.test(fn)) return false; // 'unknown' means callable ActiveX in IE<9
+    if (hasToStringTag) return tryFunctionObject(fn);
+    strClass = _toString.apply(fn);
+    trial(function () {fn.apply(this, new Array(fn.length || 0)); callable = true;});
+    return '[object Function]' === strClass || '[object GeneratorFunction]' === strClass || callable;
   }
   function hasMethod(obj, key) {
     return key in obj && isCallable(obj[key]);
@@ -502,11 +516,11 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
       }
     };
     timer.wrap = function wrap(handler) {
-      var args = [], len = arguments.length, i = 1;
-      for (; i < len; i++) args.push(arguments[i]);
-      return function _wrapped() {
-        if (typeof handler === 'function') handler.apply(null, args);
-        else functionize(String(handler)).apply(null, args);
+      var i = arguments.length - 1, args = i < 0 ? [] : new Array(i),
+        func = typeof handler === 'function' ? handler : functionize(String(handler));
+      if (i >= 0) while (i--) args[i] = arguments[i + 1];
+      return function wrapped() {
+        return func.apply(null, args);
       };
     };
     timer.create = function create(args) {
@@ -518,12 +532,25 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
     };
     timer.polyfill.messageChannel = function messageChannel() {
       var channel = new global.MessageChannel();
-      channel.port1.onmessage = function (event) {
-        timer.run(Number(event.data));
+      channel.port1.onmessage = function onmessage(event) {
+        timer.run(+event.data);
       };
       return function setImmediate() {
-        var args = [], len = arguments.length, i = 1, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
+        handleId = timer.create(args);
+        channel.port2.postMessage(handleId);
+        return handleId;
+      };
+    };
+    timer.polyfill.messageChannel = function messageChannel() {
+      var channel = new global.MessageChannel();
+      channel.port1.onmessage = function onmessage(event) {
+        timer.run(+event.data);
+      };
+      return function setImmediate() {
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         channel.port2.postMessage(handleId);
         return handleId;
@@ -536,8 +563,8 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
             event.data.indexOf(messagePrefix) === 0) timer.run(+event.data.slice(messagePrefix.length));
       }, false);
       return function setImmediate() {
-        var args = [], len = arguments.length, i = 0, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         global.postMessage(messagePrefix + handleId, '*');
         return handleId;
@@ -545,8 +572,8 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
     };
     timer.polyfill.setTimeout = function _setTimeout() {
       return function setImmediate() {
-        var args = [], len = arguments.length, i = 0, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         global.setTimeout(timer.wrap(timer.run, handleId), 1);
         return handleId;
@@ -626,7 +653,7 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
   function fontExtendLoad(el) {
     if (!el) return false;
     if (!textRegex.test(el.nodeName) && !isEdit(el)) {
-      if (!el[emoProp] && hasText(el)) setImmediate(fontExtend.bind(null, el));
+      if (!el[emoProp] && hasText(el)) setImmediate(fontExtend, el);
       return true;
     }
     return false;
@@ -641,14 +668,19 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
     fontExtender();
     observer.start();
   }
-  function onMutation(/*mutations*/) {
+  function onMutation(mutations) {
+    var i = mutations.length, nodes, j;
     observer.stop();
-    fontExtender();
+    while (i--) {
+      nodes = mutations[i].addedNodes;
+      j = nodes.length;
+      while (j--) walk(nodes[j], fontExtendLoad);
+    }
     observer.start();
   }
   document.addEventListener('focus', fontExtendEdit, true);
   observer = new MutationObserver(onMutation);
-  observer.start = function () {
+  observer.start = function start() {
     observer.start = observer.observe.bind(observer, body, observerConfig);
     observer.start();
   };
