@@ -10,7 +10,7 @@ Go here to install the extension: https://chrome.google.com/webstore/detail/emoj
 
 Emoji Polyfill can also be installed as a bookmarklet:
 ```javascript
-javascript:var i,s,ply,ss=['//greasyfork.org/scripts/8598-emoji-polyfill/code/Emoji Polyfill.user.js'];if(!ply){ply=true;for(i=ss.length;i--;){s=document.createElement('script');s.src=ss[i];document.body.appendChild(s);}}void(0);
+javascript:(function(d){'use%20strict';var%20ss=['//greasyfork.org/scripts/8598-emoji-polyfill/code/Emoji%20Polyfill.user.js'],body=d.body||d.getElementsByTagName('body')[0]||d.getElementsByTagName('frameset')[0],s,i;for(i=ss.length;i--;){s=d.createElement('script');s.src=ss[i];d.body.appendChild(s);}})(document);
 ```
 
 This is a fork of Chromoji by Locomojis, a Google Chrome extension that allows Chrome to
@@ -19,4 +19,6 @@ Chrome for Windows still does not natively support emoji the way other browsers 
 even the way Chrome for OS X now does.
 
 This UserScript will be updated so that it tries to work even in slightly older environments,
-like Internet Explorer 8 and earlier using IE7Pro.
+like Internet Explorer 8 and earlier using IE7Pro; also, even for newer operating systems, it
+will fill in support for the latest emojis while the platforms themselves don't support them
+in their default fallback fonts.
