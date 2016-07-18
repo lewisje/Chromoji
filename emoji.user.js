@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.26
+// @version 1.0.27
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -457,7 +457,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
       'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
   }, /* jshint elision: false */ fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g, headingRegex = /^h[1-6]$/i,
     roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3040-\u31FF\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
-    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false, constructorRegex = /\s*class /,
+    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false,
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
     css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), arrProto = Array.prototype,
     funcProto = Function.prototype, fnToString = funcProto.toString, _toString = Object.prototype.toString,
@@ -509,8 +509,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     var typ = typeof fn, callable = false, strClass;
     if (!fn) return false;
     if ('function' !== typ && 'object' !== typ && 'unknown' !== typ) return false;
-    if (constructorRegex.test(fn)) return false; // 'unknown' means callable ActiveX in IE<9
-    if (hasToStringTag) return tryFunctionObject(fn);
+    if (hasToStringTag) return tryFunctionObject(fn); // 'unknown' means callable ActiveX in IE<9
     strClass = _toString.apply(fn);
     trial(function () {fn.apply(this, new Array(fn.length || 0)); callable = true;});
     return '[object Function]' === strClass || '[object GeneratorFunction]' === strClass || callable;
