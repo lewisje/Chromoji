@@ -3,7 +3,7 @@
 // @description This makes the browser support emoji by using native fonts if possible and a fallback if not.
 // @name Emoji Polyfill
 // @namespace greasyfork.org
-// @version 1.0.25
+// @version 1.0.26
 // @icon https://rawgit.com/lewisje/Chromoji/simple/icon16.png
 // @include *
 // @license MIT
@@ -457,12 +457,16 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
       'https://lewisje.github.io/fonts/emojiSymb.ttf', 'https://lewisje.github.io/fonts/emojiSymb.svg#emojiSymb']
   }, /* jshint elision: false */ fontEmoRegex = /\s*(?:(?:"|')?Segoe\sUI\s(?:Emoji|Symbol)(?:"|')?|Symbola|EmojiSymb),?/g, headingRegex = /^h[1-6]$/i,
     roughEmoRegex = /[^\s\w\x00-\x22\x24-\x29\x2B-\x2F\x3A-\u203B\u2050-\u2116\u3040-\u31FF\u3299-\uD83B\uD83F-\uDBFF\uE537-\uF8FE\uF900-\uFFFF]/,
-    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false, bind, filter,
+    upperRegex = /[\uD840-\uD869]/g, lowerRegex = /[\uDC00-\uDFFF]/g, surrogate = false, constructorRegex = /\s*class /,
     textRegex = /^(?:i?frame|link|(?:no)?script|style|textarea|#text)$/i, typs = ['embedded-opentype', 'woff2', 'woff', 'opentype', 'truetype', 'svg'],
-    css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), funcProto = Function.prototype,
+    css = ['/* Injected by Emoji Polyfill */'], style = document.createElement('style'), arrProto = Array.prototype,
+    funcProto = Function.prototype, fnToString = funcProto.toString, _toString = Object.prototype.toString,
+    hasSymbols = typeof Symbol === 'function' && typeof Symbol() === 'symbol',
+    hasToStringTag = hasSymbols && typeof Symbol.toStringTag === 'symbol',
     head = document.head || document.getElementsByTagName('head')[0], MutationObserver = window.MutationObserver,
-    observer = {}, observerConfig, body, fontExtender, addHandler, removeHandler, setImmediate, emoProp,
-    getStyle, delStyle, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
+    emoProp = hasSymbols ? Symbol('$emoji$') : '$emoji$' + (10 * Math.random()) + '$',
+    observer = {}, observerConfig, body, fontExtender, addHandler, removeHandler, setImmediate,
+    bind, filter, getStyle, delStyle, fnt, emofnt, typ, r, NATIVE_MUTATION_EVENTS;
   for (fnt in emo) if (emo.hasOwnProperty(fnt)) {
     if (fnt === 'Sym') css.push('\n/* Emoji Symbols Font (C) Blockworks - Kenichi Kaneko http://emojisymbols.com/ */');
     css.push('\n@font-face {\n  font-family: "Emoji' + fnt + '";\n  src: local("\u263A\uFE0E")');
@@ -477,33 +481,39 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   head.appendChild(style);
   // part of a pair of functions intended to isolate code that kills the optimizing compiler
   // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
-  function functionize(func, arg) {
-    var functionized;
-    switch (typeof func) {
-      case 'string':
-        return arg ? new Function(String(arg), func) : new Function(func); // jshint evil: true
-      case 'function':
-        return func;
-      default:
-        functionized = function functionized() {return func;};
-        return functionized;
+  function functionize(func, arg) { /* jshint evil: true */
+    var typ = typeof func, thunk;
+    if (isCallable(func)) return func;
+    if (func && 'string' === typ || ('object' === typ && '[object String]' === _toString.apply(func))) {
+      trial(function () {thunk = arg ? new Function(String(arg), func) : new Function(func);}); // jshint evil: true
     }
+    thunk = thunk || function thunk() {return func;};
+    return thunk;
   }
   // The first argument to the toCatch callback is the caught error;
   // if toCatch is passed as a string, this argument must be named "e"
   function trial(toTry, toCatch, toFinal) {
     var _try = functionize(toTry),
-      _catch = functionize(toCatch, 'e'),
+      _catch = functionize(toCatch, '_'),
       _final = functionize(toFinal);
     try {_try();}
-    catch (e) {_catch(e);}
+    catch (_) {_catch(_);}
     finally {_final();}
   }
+  function tryFunctionObject(value) {
+    try {fnToString.apply(value); return true;}
+    catch (_) {return false;}
+  }
+  // Reference: https://github.com/ljharb/is-callable/
   function isCallable(fn) {
-    var callable = false;
-    return typeof fn === 'function' || Object.prototype.toString.apply(fn) === '[object Function]' ||
-      typeof fn === 'unknown' || (typeof fn === 'object' && trial(function () {fn(); callable = true;})) ||
-      callable; // 'unknown' means callable ActiveX in IE<9
+    var typ = typeof fn, callable = false, strClass;
+    if (!fn) return false;
+    if ('function' !== typ && 'object' !== typ && 'unknown' !== typ) return false;
+    if (constructorRegex.test(fn)) return false; // 'unknown' means callable ActiveX in IE<9
+    if (hasToStringTag) return tryFunctionObject(fn);
+    strClass = _toString.apply(fn);
+    trial(function () {fn.apply(this, new Array(fn.length || 0)); callable = true;});
+    return '[object Function]' === strClass || '[object GeneratorFunction]' === strClass || callable;
   }
   function hasMethod(obj, key) {
     return key in obj && isCallable(obj[key]);
@@ -512,13 +522,13 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   // Reference: https://es5.github.io/#x15.3.4.5
   if (hasMethod(funcProto, 'bind')) bind = funcProto.call.bind(funcProto.bind);
   else bind = function bind(func, oThis) {
-    var aArgs = [], len = arguments.length, i = 2, fToBind = functionize(func), FNOP, fBound;
-    for (; i < len; i++) aArgs.push(arguments[i]);
+    var i = arguments.length - 2, aArgs = i < 1 ? [] : new Array(i), fToBind = functionize(func), FNOP, fBound;
+    if (i >= 0) while (i--) aArgs[i] = arguments[i + 2];
     FNOP = function FNOP() {};
     if (fToBind.prototype) FNOP.prototype = fToBind.prototype;
     fBound = function fBound() { // jshint validthis: true
-      var args = [], len = arguments.length, i = 0;
-      for (; i < len; i++) args.push(arguments[i]);
+      var i = arguments.length, args = new Array(i);
+      while (i--) args[i] = arguments[i];
       return fToBind.apply(this instanceof FNOP && oThis ? this : oThis, aArgs.concat(args));
     };
     fBound.prototype = new FNOP();
@@ -526,7 +536,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   };
   // Production steps of ECMA-262, Edition 5, 15.4.4.20
   // Reference: https://es5.github.io/#x15.4.4.20
-  if (hasMethod(Array.prototype, 'filter')) filter = bind(funcProto.call, Array.prototype.filter);
+  if (hasMethod(arrProto, 'filter')) filter = bind(funcProto.call, arrProto.filter);
   else filter = function filter(arr, callback, thisArg) { // jshint validthis: true
     if (!arr) return arr;
     if (!isCallable(callback)) throw new TypeError('callback must be a function');
@@ -707,12 +717,13 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
       }
     };
     timer.wrap = function (handler) {
-      var args = [], len = arguments.length, i = 1;
-      for (; i < len; i++) args.push(arguments[i]);
-      return function () {
-        if (typeof handler === 'function') handler.apply(null, args);
-        else functionize(String(handler)).apply(null, args);
-      };
+      var i = arguments.length - 1, args = i < 0 ? [] : new Array(i),
+        func = typeof handler === 'function' ? handler : functionize(String(handler));
+      if (i >= 0) while (i--) args[i] = arguments[i + 1];
+      function wrapped() {
+        return func.apply(null, args);
+      }
+      return wrapped;
     };
     timer.create = function (args) {
       timer.tasks[timer.nextId] = timer.wrap.apply(null, args);
@@ -723,22 +734,22 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     };
     timer.polyfill.messageChannel = function () {
       var channel = new global.MessageChannel();
+      channel.port1.onmessage = function (event) {
+        timer.run(+event.data);
+      };
       function setImmediate() {
-        var args = [], len = arguments.length, i = 1, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         channel.port2.postMessage(handleId);
         return handleId;
       }
-      channel.port1.onmessage = function (event) {
-        timer.run(Number(event.data));
-      };
       return setImmediate;
     };
     timer.polyfill.nextTick = function () {
       function setImmediate() {
-        var args = [], len = arguments.length, i = 1, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         global.process.nextTick(timer.wrap(timer.run, handleId));
         return handleId;
@@ -752,8 +763,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
             event.data.indexOf(messagePrefix) === 0) timer.run(+event.data.slice(messagePrefix.length));
       }
       function setImmediate() {
-        var args = [], len = arguments.length, i = 0, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         global.postMessage(messagePrefix + handleId, '*');
         return handleId;
@@ -765,9 +776,9 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     timer.polyfill.readyStateChange = function readyStateChange() {
       var html = doc.documentElement;
       function setImmediate() {
-        var args = [], len = arguments.length, i = 0, handleId,
+        var i = arguments.length, args = new Array(i), handleId,
           script = doc.createElement('script');
-        for (; i < len; i++) args.push(arguments[i]);
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         script.onreadystatechange = function () {
           timer.run(handleId);
@@ -782,8 +793,8 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     };
     timer.polyfill.setTimeout = function () {
       function setImmediate() {
-        var args = [], len = arguments.length, i = 0, handleId;
-        for (; i < len; i++) args.push(arguments[i]);
+        var i = arguments.length, args = new Array(i), handleId;
+        while (i--) args[i] = arguments[i];
         handleId = timer.create(args);
         global.setTimeout(timer.wrap(timer.run, handleId), 1);
         return handleId;
@@ -822,8 +833,6 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     attachTo.clearImmediate = attachTo.msClearImmediate = timer.clear;
     return attachTo.setImmediate;
   })(Object, Array, window);
-  if (hasMethod(window, 'Symbol')) emoProp = Symbol('$emoji$');
-  else emoProp = '$emoji$' + (10 * Math.random()) + '$';
   function isEdit(el) {
     var n = el.nodeName.toLowerCase();
     return (n === 'input' && el.type === 'text') || (n === 'textarea') || el.isContentEditable;
@@ -872,7 +881,7 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     else el.style.cssText += '; ' + newfont;
   }
   function fontExtendEdit(e) {
-    var evt = e || window.event, el = evt.target;
+    var evt = e || window.event, el = evt.target || evt.srcElement;
     if (!el[emoProp] && isEdit(el)) fontExtend(el);
   }
   function fontExtendLoad(el) {
@@ -885,13 +894,13 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
   }
   function fontExtendNode(e) {
     var evt = e || window.event;
-    walk(evt.target, fontExtendLoad);
+    walk(evt.target || evt.srcElement, fontExtendLoad);
   }
   function init(/*e*/) {
     removeHandler(document, 'readystatechange', init, false);
     removeHandler(document, 'DOMContentLoaded', init, false);
     removeHandler(window, 'load', init, false);
-    body = document.body || document.getElementsByTagName('body')[0];
+    body = document.body || document.getElementsByTagName('body')[0] || document.getElementsByTagName('frameset')[0];
     fontExtender = bind(fontExtendNode, null, {target: body});
     fontExtender();
     observer.start();
@@ -910,9 +919,23 @@ window.MutationObserver = window.MutationObserver || window.MozMutationObserver 
     root.id = l;
     return f;
   })();
-  function onMutation(/*mutations*/) {
+  var mutate = function (e) {
+    if (typeof e.length === 'number') mutate = function mutate(mutations) {
+      var i = mutations.length, nodes, j;
+      while (i--) {
+        nodes = mutations[i].addedNodes;
+        j = nodes.length;
+        while (j--) walk(nodes[j], fontExtendLoad);
+      }
+    };
+    else if (typeof e.target !== 'undefined') mutate = function mutate(e) {walk(e.target, fontExtendLoad);};
+    else if (typeof e.srcElement !== 'undefined') mutate = function mutate(e) {walk(e.srcElement, fontExtendLoad);};
+    else mutate = fontExtender;
+    return mutate(e);
+  };
+  function onMutation(mutations) {
     observer.stop();
-    fontExtender();
+    mutate(mutations);
     observer.start();
   }
   if (MutationObserver) {
