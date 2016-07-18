@@ -448,7 +448,7 @@ if (typeof window.MutationObserver !== 'function') Object.defineProperty(window,
   // https://github.com/petkaantonov/bluebird/wiki/Optimization-killers
   function functionize(func, arg) { /* jshint evil: true */
     var typ = typeof func, thunk;
-    if (isCallable(func)) return func;
+    if ('function' === typ || isCallable(func)) return func;
     if (func && 'string' === typ || ('object' === typ && '[object String]' === _toString.apply(func))) {
       trial(function () {thunk = arg ? new Function(String(arg), func) : new Function(func);}); // jshint evil: true
     }
